@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio, AudioEvent;
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
@@ -126,6 +127,8 @@ void main() {
         originalAspectRatio: 1,
       ),
     );
+    registerFallbackValue(<StopMotionClipFrame>[]);
+    registerFallbackValue(Duration.zero);
   });
 
   setUp(() {
@@ -1912,6 +1915,161 @@ void main() {
         await bloc.close();
         verify(() => cameraService.dispose()).called(1);
       });
+    });
+
+    group('stop-motion', () {
+      DivineVideoClip fakeClip() => DivineVideoClip(
+        id: 'clip_sm_1',
+        video: EditorVideo.file('/out.mp4'),
+        duration: const Duration(milliseconds: 250),
+        recordedAt: DateTime(2024),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      void stubClipIngest() {
+        when(
+          () => clipManager.addStopMotionClip(
+            frames: any(named: 'frames'),
+            originalAspectRatio: any(named: 'originalAspectRatio'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            duration: any(named: 'duration'),
+            thumbnailPath: any(named: 'thumbnailPath'),
+            lensMetadata: any(named: 'lensMetadata'),
+          ),
+        ).thenReturn(fakeClip());
+        when(() => clipManager.clips).thenReturn([fakeClip()]);
+        when(
+          () => clipManager.saveClipToLibrary(any()),
+        ).thenAnswer((_) async => true);
+      }
+
+      setUp(() {
+        when(() => cameraService.capturePhoto()).thenAnswer(
+          (_) async => const PhotoCaptureResult(filePath: '/tmp/frame.jpg'),
+        );
+      });
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'a captured frame is appended without rendering a clip',
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.stopMotion,
+        ),
+        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
+        verify: (bloc) {
+          verify(() => cameraService.capturePhoto()).called(1);
+          expect(bloc.state.stopMotionFrames, ['/tmp/frame.jpg']);
+          verifyNever(
+            () => clipManager.addClip(
+              video: any(named: 'video'),
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              duration: any(named: 'duration'),
+              thumbnailPath: any(named: 'thumbnailPath'),
+              lensMetadata: any(named: 'lensMetadata'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'the shutter toggle captures a frame in stop-motion mode',
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.stopMotion,
+        ),
+        act: (bloc) => bloc.add(const VideoRecorderRecordingToggleRequested()),
+        wait: const Duration(milliseconds: 20),
+        verify: (bloc) {
+          verify(() => cameraService.capturePhoto()).called(1);
+          expect(bloc.state.stopMotionFrames, hasLength(1));
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'no frame is appended when the camera returns no photo',
+        setUp: () {
+          when(
+            () => cameraService.capturePhoto(),
+          ).thenAnswer((_) async => null);
+        },
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.stopMotion,
+        ),
+        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
+        verify: (bloc) => expect(bloc.state.stopMotionFrames, isEmpty),
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'undo removes the last captured frame',
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.stopMotion,
+          stopMotionFrames: ['/tmp/a.jpg', '/tmp/b.jpg'],
+        ),
+        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameUndone()),
+        verify: (bloc) => expect(bloc.state.stopMotionFrames, ['/tmp/a.jpg']),
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'ingest saves the captured frames as a clip and signals ready',
+        setUp: stubClipIngest,
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.stopMotion,
+          stopMotionFrames: ['/tmp/a.jpg', '/tmp/b.jpg'],
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoRecorderStopMotionAssembleRequested()),
+        verify: (bloc) {
+          final captured = verify(
+            () => clipManager.addStopMotionClip(
+              frames: captureAny(named: 'frames'),
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              duration: any(named: 'duration'),
+              thumbnailPath: any(named: 'thumbnailPath'),
+              lensMetadata: any(named: 'lensMetadata'),
+            ),
+          )..called(1);
+          final frames = captured.captured.single as List<StopMotionClipFrame>;
+          expect(frames.map((f) => f.path), ['/tmp/a.jpg', '/tmp/b.jpg']);
+          verify(() => clipManager.saveClipToLibrary(any())).called(1);
+          expect(bloc.state.stopMotionStatus, StopMotionStatus.ready);
+          expect(bloc.state.stopMotionFrames, isEmpty);
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'emits failure when ingest throws',
+        setUp: () {
+          when(
+            () => clipManager.addStopMotionClip(
+              frames: any(named: 'frames'),
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              duration: any(named: 'duration'),
+              thumbnailPath: any(named: 'thumbnailPath'),
+              lensMetadata: any(named: 'lensMetadata'),
+            ),
+          ).thenThrow(Exception('ingest failed'));
+        },
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.stopMotion,
+          stopMotionFrames: ['/tmp/a.jpg'],
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoRecorderStopMotionAssembleRequested()),
+        errors: () => [isA<Exception>()],
+        verify: (bloc) {
+          expect(bloc.state.stopMotionStatus, StopMotionStatus.failure);
+          verifyNever(() => clipManager.saveClipToLibrary(any()));
+        },
+      );
     });
   });
 }

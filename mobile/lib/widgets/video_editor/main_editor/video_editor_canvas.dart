@@ -723,7 +723,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   List<String> get _clipPaths => ref
       .read(clipManagerProvider)
       .clips
-      .map((c) => c.video.file?.path)
+      .map((c) => c.video?.file?.path)
       .whereType<String>()
       .toList();
 
@@ -1043,6 +1043,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                         originalAspectRatio: clip.originalAspectRatio,
                         bodySize: widget.bodySize,
                         renderSize: widget.renderSize,
+                        stopMotionFrames: clip.stopMotionFrames,
                       ),
                       Positioned.fill(
                         child: ValueListenableBuilder<int>(
@@ -1587,8 +1588,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // rebuild even when the paths haven't actually changed.
     ref.listen<List<String>>(
       clipManagerProvider.select(
-        (s) =>
-            s.clips.map((c) => c.video.file?.path).whereType<String>().toList(),
+        (s) => s.clips
+            .map((c) => c.video?.file?.path)
+            .whereType<String>()
+            .toList(),
       ),
       (previous, clipPaths) {
         if (listEquals(previous, clipPaths)) return;
@@ -1762,7 +1765,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             final clip = state.clips.firstWhere(
               (c) => c.id == state.trimmingClipId,
             );
-            final path = clip.video.file?.path;
+            final path = clip.video?.file?.path;
             if (path == null) return;
             // Composition swap: invalidate in-flight seeks and release _isSeeking.
             _seekEpoch++;

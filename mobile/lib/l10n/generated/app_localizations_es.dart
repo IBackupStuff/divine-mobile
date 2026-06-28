@@ -7904,6 +7904,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Agrega audio antes de grabar';
 
   @override
+  String get videoRecorderStopMotionAssembling => 'Creando tu vídeo…';
+
+  @override
+  String get videoRecorderStopMotionAssembleFailed =>
+      'No se pudo crear el vídeo. Inténtalo de nuevo.';
+
+  @override
   String get videoRecorderToggleFlashLabel => 'Activar o desactivar flash';
 
   @override

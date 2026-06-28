@@ -61,8 +61,8 @@ class ClipLibraryService {
           durationMs: clip.duration.inMilliseconds,
           recordedAt: clip.recordedAt,
           data: json.encode(clip.toJson()),
-          filePath: clip.video.file?.path != null
-              ? p.basename(clip.video.file!.path)
+          filePath: clip.video?.file?.path != null
+              ? p.basename(clip.video!.file!.path)
               : null,
           thumbnailPath: clip.thumbnailPath != null
               ? p.basename(clip.thumbnailPath!)
@@ -112,8 +112,8 @@ class ClipLibraryService {
       durationMs: clip.duration.inMilliseconds,
       recordedAt: clip.recordedAt,
       data: json.encode(clip.toJson()),
-      filePath: clip.video.file?.path != null
-          ? p.basename(clip.video.file!.path)
+      filePath: clip.video?.file?.path != null
+          ? p.basename(clip.video!.file!.path)
           : null,
       thumbnailPath: clip.thumbnailPath != null
           ? p.basename(clip.thumbnailPath!)
@@ -365,7 +365,10 @@ class ClipLibraryService {
 
     for (final clip in incomplete) {
       try {
-        final videoPath = await clip.video.safeFilePath();
+        // Stop-motion clips have no rendered video to recover assets from;
+        // their thumbnail is the first captured frame.
+        if (clip.isStopMotion) continue;
+        final videoPath = await clip.video!.safeFilePath();
         var updatedClip = clip;
 
         if (clip.thumbnailPath == null) {

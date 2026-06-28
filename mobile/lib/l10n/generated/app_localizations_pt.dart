@@ -7881,6 +7881,13 @@ class AppLocalizationsPt extends AppLocalizations {
       'Adicione áudio antes de gravar';
 
   @override
+  String get videoRecorderStopMotionAssembling => 'Criando seu vídeo…';
+
+  @override
+  String get videoRecorderStopMotionAssembleFailed =>
+      'Não foi possível criar o vídeo. Tente novamente.';
+
+  @override
   String get videoRecorderToggleFlashLabel => 'Alternar flash';
 
   @override

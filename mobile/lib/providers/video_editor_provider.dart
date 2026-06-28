@@ -914,7 +914,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         category: LogCategory.video,
       );
 
-      final videoPath = clip.video.file!.path;
+      final videoPath = clip.requireVideo.file!.path;
       final result = await VideoThumbnailService.extractThumbnail(
         videoPath: videoPath,
         targetTimestamp: clip.thumbnailTimestamp,

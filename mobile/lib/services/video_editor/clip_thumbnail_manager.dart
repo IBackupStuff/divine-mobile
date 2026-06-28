@@ -97,7 +97,7 @@ class ClipThumbnailManager {
     // Ensure notifiers exist and start (or restart) loading.
     for (final clip in clips) {
       _notifiers.putIfAbsent(clip.id, () => ValueNotifier(const []));
-      final newPath = clip.video.file?.path;
+      final newPath = clip.video?.file?.path;
       final currentPath = _videoPaths[clip.id];
       final hasSubscription = _subscriptions.containsKey(clip.id);
       final isSeeded = _seeded.contains(clip.id);
@@ -223,7 +223,7 @@ class ClipThumbnailManager {
     double devicePixelRatio, {
     List<Duration>? priorityTimestamps,
   }) {
-    final videoPath = clip.video.file?.path;
+    final videoPath = clip.video?.file?.path;
     if (videoPath == null) return;
 
     _videoPaths[clip.id] = videoPath;

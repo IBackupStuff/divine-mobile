@@ -40,6 +40,14 @@ class VideoEditorConstants {
   /// Maximum recording duration for videos.
   static const maxDuration = Duration(seconds: 6, milliseconds: 300);
 
+  /// Minimum duration a rendered stop-motion video must reach.
+  ///
+  /// Very short clips (a single still ≈ 83ms) make looping players stutter and
+  /// oscillate. The renderer repeats the captured sequence an integer number of
+  /// times until the output is at least this long, preserving the per-frame
+  /// timing and keeping the loop seamless.
+  static const stopMotionMinOutputDuration = Duration(seconds: 1);
+
   /// Default time offset for extracting video thumbnails.
   static const defaultThumbnailExtractTime = Duration(milliseconds: 200);
 

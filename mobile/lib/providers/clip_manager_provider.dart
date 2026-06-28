@@ -11,6 +11,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -264,6 +265,54 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     return clip;
   }
 
+  /// Adds a frames-based stop-motion clip to the manager.
+  ///
+  /// The captured stills ([frames]) are the clip's source of truth; no mp4
+  /// exists yet — the editor previews the frames via the stop-motion player and
+  /// an mp4 is rendered only at publish. Trimming and proof generation are
+  /// skipped (both operate on a rendered video).
+  DivineVideoClip addStopMotionClip({
+    required List<StopMotionClipFrame> frames,
+    required double originalAspectRatio,
+    required model.AspectRatio targetAspectRatio,
+    required Duration duration,
+    String? thumbnailPath,
+    CameraLensMetadata? lensMetadata,
+  }) {
+    // A new clip supersedes any pending undo from a previous tap.
+    if (state.pendingDeletion != null) {
+      _cancelPendingDeletionTimer();
+      unawaited(_commitPendingDeletion());
+    }
+
+    final clip = DivineVideoClip(
+      id: 'clip_${DateTime.now().millisecondsSinceEpoch}_${_clipCounter++}',
+      stopMotionFrames: frames,
+      duration: duration,
+      recordedAt: .now(),
+      thumbnailPath: thumbnailPath,
+      targetAspectRatio: targetAspectRatio,
+      originalAspectRatio: originalAspectRatio,
+      lensMetadata: lensMetadata,
+    );
+
+    _clips.add(clip);
+    Log.info(
+      '📎 Added stop-motion clip: ${clip.id}, ${frames.length} frame(s)',
+      name: 'ClipManagerNotifier',
+      category: .video,
+    );
+
+    state = state.copyWith(
+      clips: List.unmodifiable(_clips),
+      activeRecordingDuration: .zero,
+    );
+
+    _triggerAutosave();
+
+    return clip;
+  }
+
   /// Generates a ProofMode / C2PA attestation for a single clip.
   ///
   /// Waits for any pending processing (e.g. trimming) to finish first,
@@ -274,7 +323,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       // Wait for trimming to finish before proofing the final file
       await clip.processingCompleter?.future;
 
-      final videoFile = clip.video.file;
+      final videoFile = clip.video?.file;
       if (videoFile == null) return;
 
       Log.debug(

@@ -3026,6 +3026,8 @@
     "videoRecorderCaptureCloseLabel": "Tutup",
     "videoRecorderCaptureNextLabel": "Berikutnya",
     "videoRecorderLipSyncAddAudioFirst": "Tambahkan audio sebelum merekam",
+    "videoRecorderStopMotionAssembling": "Membuat video Anda…",
+    "videoRecorderStopMotionAssembleFailed": "Tidak dapat membuat video. Coba lagi.",
     "videoRecorderClipDeletedMessage": "Klip dipindahkan ke sampah",
     "videoRecorderClipUndoLabel": "Urungkan",
     "libraryTrashTitle": "Baru-baru ini dihapus",

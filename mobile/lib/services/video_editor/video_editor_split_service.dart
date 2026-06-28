@@ -150,7 +150,7 @@ class VideoEditorSplitService {
     // timeout), so a stalled export can never wedge the editor again (#4801).
     try {
       final outPaths = await VideoEditorRenderService.splitNativeVideoToFile(
-        inputPath: await sourceClip.video.safeFilePath(),
+        inputPath: await sourceClip.requireVideo.safeFilePath(),
         splitPosition: absoluteSplitPos,
         startOutputPath: startClipPath,
         endOutputPath: endClipPath,
@@ -212,7 +212,7 @@ class VideoEditorSplitService {
         category: .video,
       );
       final thumbnailResult = await VideoThumbnailService.extractThumbnail(
-        videoPath: await sourceClip.video.safeFilePath(),
+        videoPath: await sourceClip.requireVideo.safeFilePath(),
         targetTimestamp: timestamp,
       );
       if (thumbnailResult != null) {

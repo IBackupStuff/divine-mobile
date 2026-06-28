@@ -7780,6 +7780,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoRecorderLipSyncAddAudioFirst => 'أضف صوتًا قبل التسجيل';
 
   @override
+  String get videoRecorderStopMotionAssembling => 'جارٍ إنشاء الفيديو…';
+
+  @override
+  String get videoRecorderStopMotionAssembleFailed =>
+      'تعذّر إنشاء الفيديو. حاول مرة أخرى.';
+
+  @override
   String get videoRecorderToggleFlashLabel => 'تبديل الفلاش';
 
   @override

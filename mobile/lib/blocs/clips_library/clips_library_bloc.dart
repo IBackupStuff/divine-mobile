@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
+import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -334,7 +335,15 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
 
     for (final clip in clipsToSave) {
       try {
-        final result = await _gallerySaveService.saveVideoToGallery(clip.video);
+        // Stop-motion clips render their mp4 on demand before saving.
+        final materialized = await StopMotionRenderService.materialize(clip);
+        if (materialized == null) {
+          failureCount++;
+          continue;
+        }
+        final result = await _gallerySaveService.saveVideoToGallery(
+          materialized.requireVideo,
+        );
 
         switch (result) {
           case GallerySaveSuccess():

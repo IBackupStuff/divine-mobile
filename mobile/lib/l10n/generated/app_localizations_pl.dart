@@ -8001,6 +8001,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoRecorderLipSyncAddAudioFirst => 'Dodaj audio przed nagraniem';
 
   @override
+  String get videoRecorderStopMotionAssembling => 'Tworzenie filmu…';
+
+  @override
+  String get videoRecorderStopMotionAssembleFailed =>
+      'Nie udało się utworzyć filmu. Spróbuj ponownie.';
+
+  @override
   String get videoRecorderToggleFlashLabel => 'Przełącz lampę błyskową';
 
   @override

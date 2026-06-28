@@ -3,6 +3,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 enum VideoRecorderMode {
   upload,
   capture,
+  stopMotion,
   lipSync,
   classic,
   ;
@@ -21,6 +22,7 @@ enum VideoRecorderMode {
   String get label => switch (this) {
     .upload => 'Upload',
     .capture => 'Capture',
+    .stopMotion => 'Stop Motion',
     .lipSync => 'Lip Sync',
     .classic => 'Classic',
   };
@@ -28,6 +30,7 @@ enum VideoRecorderMode {
   bool get hasRecordingLimit => switch (this) {
     .upload => false,
     .capture => false,
+    .stopMotion => false,
     .lipSync => true,
     .classic => true,
   };
@@ -35,6 +38,7 @@ enum VideoRecorderMode {
   bool get hasVideoEditor => switch (this) {
     .upload => false,
     .capture => true,
+    .stopMotion => true,
     .lipSync => true,
     .classic => false,
   };
@@ -42,6 +46,7 @@ enum VideoRecorderMode {
   bool get supportGridLines => switch (this) {
     .upload => false,
     .capture => false,
+    .stopMotion => false,
     .lipSync => false,
     .classic => true,
   };
@@ -49,6 +54,7 @@ enum VideoRecorderMode {
   bool get supportsCountdownTimer => switch (this) {
     .upload => false,
     .capture => true,
+    .stopMotion => false,
     .lipSync => true,
     .classic => false,
   };
@@ -56,7 +62,12 @@ enum VideoRecorderMode {
   model.AspectRatio get defaultAspectRatio => switch (this) {
     .upload => .vertical,
     .capture => .vertical,
+    .stopMotion => .vertical,
     .lipSync => .vertical,
     .classic => .square,
   };
+
+  /// Whether this mode captures still photos (stop-motion) instead of
+  /// recording video. Drives the shutter behavior and capture UI.
+  bool get capturesStills => this == stopMotion;
 }

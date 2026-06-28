@@ -1,5 +1,20 @@
 part of 'video_recorder_bloc.dart';
 
+/// Lifecycle of the stop-motion "assemble captured frames into one video" step.
+enum StopMotionStatus {
+  /// No assembly in progress.
+  idle,
+
+  /// Captured frames are being encoded into a single video.
+  assembling,
+
+  /// Assembly finished; the clip is in the manager and the editor can open.
+  ready,
+
+  /// Assembly failed.
+  failure,
+}
+
 /// State for [VideoRecorderBloc].
 ///
 /// Ports the legacy `VideoRecorderProviderState` verbatim and adds the mutable
@@ -44,6 +59,8 @@ class VideoRecorderBlocState extends Equatable {
     this.lastRawZoom = 1.0,
     this.snapTime,
     this.showZoomIndicator = false,
+    this.stopMotionFrames = const [],
+    this.stopMotionStatus = StopMotionStatus.idle,
   });
 
   /// Recorder mode from the camera.
@@ -173,6 +190,22 @@ class VideoRecorderBlocState extends Equatable {
   /// only shows up while the user is actively changing the zoom.
   final bool showZoomIndicator;
 
+  /// Captured stop-motion frame file paths, in capture order.
+  ///
+  /// Each shutter tap in stop-motion mode appends one still here; they are
+  /// encoded into a single video only on finish (assemble-at-end), so capture
+  /// stays instant.
+  final List<String> stopMotionFrames;
+
+  /// Lifecycle of the stop-motion assemble step.
+  final StopMotionStatus stopMotionStatus;
+
+  /// Number of captured stop-motion frames.
+  int get stopMotionFrameCount => stopMotionFrames.length;
+
+  /// Path of the most recently captured stop-motion frame, if any.
+  String? get stopMotionLastFrame => stopMotionFrames.lastOrNull;
+
   /// Whether currently recording.
   bool get isRecording => recordingState == VideoRecorderState.recording;
 
@@ -221,6 +254,8 @@ class VideoRecorderBlocState extends Equatable {
     double? lastRawZoom,
     DateTime? snapTime,
     bool? showZoomIndicator,
+    List<String>? stopMotionFrames,
+    StopMotionStatus? stopMotionStatus,
   }) {
     return VideoRecorderBlocState(
       recorderMode: recorderMode ?? this.recorderMode,
@@ -262,6 +297,8 @@ class VideoRecorderBlocState extends Equatable {
       lastRawZoom: lastRawZoom ?? this.lastRawZoom,
       snapTime: snapTime ?? this.snapTime,
       showZoomIndicator: showZoomIndicator ?? this.showZoomIndicator,
+      stopMotionFrames: stopMotionFrames ?? this.stopMotionFrames,
+      stopMotionStatus: stopMotionStatus ?? this.stopMotionStatus,
     );
   }
 
@@ -298,5 +335,7 @@ class VideoRecorderBlocState extends Equatable {
     lastRawZoom,
     snapTime,
     showZoomIndicator,
+    stopMotionFrames,
+    stopMotionStatus,
   ];
 }

@@ -792,7 +792,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     if (index == -1) return;
 
     final clip = state.clips[index];
-    final videoPath = clip.video.file?.path;
+    final videoPath = clip.requireVideo.file?.path;
 
     if (videoPath == null) {
       Log.warning(
@@ -943,7 +943,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     if (index == -1) return;
 
     final clip = state.clips[index];
-    final videoPath = clip.video.file?.path;
+    final videoPath = clip.requireVideo.file?.path;
 
     if (videoPath == null) {
       Log.warning(
@@ -1041,7 +1041,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     if (state.currentClipIndex >= clips.length) return;
 
     final clip = clips[state.currentClipIndex];
-    final videoPath = clip.video.file?.path;
+    final videoPath = clip.requireVideo.file?.path;
     final extractionSpeed = _effectiveAudioExtractionSpeed(clip);
 
     if (videoPath == null) {
@@ -1090,7 +1090,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       }
 
       final currentClip = currentClips[currentIndex];
-      final currentVideoPath = currentClip.video.file?.path;
+      final currentVideoPath = currentClip.requireVideo.file?.path;
       final currentExtractionSpeed = _effectiveAudioExtractionSpeed(
         currentClip,
       );

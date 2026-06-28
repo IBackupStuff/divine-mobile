@@ -21,6 +21,8 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         canSwitchCamera: b.state.canSwitchCamera,
         hasFlash: b.state.hasFlash,
         isRecording: b.state.isRecording,
+        supportsTimer: b.state.recorderMode.supportsCountdownTimer,
+        capturesStills: b.state.recorderMode.capturesStills,
       ),
     );
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
@@ -54,13 +56,15 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                         )
                       : null,
                 ),
-                _IconButton(
-                  icon: state.timer.icon,
-                  label: context.l10n.videoRecorderCycleTimerLabel,
-                  onTap: () => context.read<VideoRecorderBloc>().add(
-                    const VideoRecorderTimerCycled(),
+                if (state.supportsTimer)
+                  _IconButton(
+                    icon: state.timer.icon,
+                    label: context.l10n.videoRecorderCycleTimerLabel,
+                    onTap: () => context.read<VideoRecorderBloc>().add(
+                      const VideoRecorderTimerCycled(),
+                    ),
                   ),
-                ),
+                if (state.capturesStills) const _GhostFrameButton(),
                 _IconButton(
                   icon: state.aspectRatio == .square
                       ? .cropSquare
@@ -87,6 +91,34 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Toggles the ghost-frame (onion-skin) overlay in stop-motion mode, mirroring
+/// the classic-mode ghost toggle.
+class _GhostFrameButton extends StatelessWidget {
+  const _GhostFrameButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return _IconButton(
+      icon: .ghost,
+      label: context.l10n.videoRecorderToggleGhostFrameLabel,
+      onTap: () {
+        final bloc = context.read<VideoRecorderBloc>();
+        final willEnable = !bloc.state.showLastClipOverlay;
+        bloc.add(const VideoRecorderShowLastClipOverlayToggled());
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            DivineSnackbarContainer.snackBar(
+              willEnable
+                  ? context.l10n.videoRecorderGhostFrameEnabled
+                  : context.l10n.videoRecorderGhostFrameDisabled,
+            ),
+          );
+      },
     );
   }
 }

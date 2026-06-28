@@ -22,7 +22,9 @@ void main() {
         home: Scaffold(
           body: Center(
             child: SizedBox(
-              width: 400,
+              // Wide enough to lay out every mode item on screen (one per
+              // 96px) so label assertions don't miss off-screen modes.
+              width: 720,
               child: VideoRecorderModeSelectorWheel(
                 selectedMode: mode ?? selectedMode,
                 onModeChanged: (m) => modeChanges.add(m),

@@ -4,6 +4,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -12,6 +13,7 @@ import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_cap
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_top_bar.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_countdown_overlay.dart';
+import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_record_button.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_zoom_indicator.dart';
 
@@ -53,9 +55,15 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
-    final isRecording = context.select(
-      (VideoRecorderBloc b) => b.state.isRecording,
+    final (isRecording, capturesStills, stopMotionFrameCount) = context.select(
+      (VideoRecorderBloc b) => (
+        b.state.isRecording,
+        b.state.recorderMode.capturesStills,
+        b.state.stopMotionFrameCount,
+      ),
     );
+    // Stop-motion has no clips during capture; undo removes the last still.
+    final canUndo = capturesStills ? stopMotionFrameCount > 0 : hasClips;
 
     return SafeArea(
       bottom: false,
@@ -95,14 +103,18 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
                 children: [
                   AnimatedOpacity(
                     duration: const Duration(milliseconds: 220),
-                    opacity: hasClips && !isRecording && !fromEditor ? 1 : 0,
+                    opacity: canUndo && !isRecording && !fromEditor ? 1 : 0,
                     child: DivineIconButton(
                       icon: .trash,
                       semanticLabel:
                           context.l10n.videoRecorderDeleteLastClipLabel,
                       type: .ghostSecondary,
                       size: .small,
-                      onPressed: () => _deleteLastClip(context, ref),
+                      onPressed: capturesStills
+                          ? () => context.read<VideoRecorderBloc>().add(
+                              const VideoRecorderStopMotionFrameUndone(),
+                            )
+                          : () => _deleteLastClip(context, ref),
                     ),
                   ),
 
@@ -140,8 +152,74 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
 
           // Countdown overlay
           const VideoRecorderCountdownOverlay(),
+
+          // Stop-motion: encodes captured frames into one clip, then opens the
+          // editor; shows a blocking overlay while assembling.
+          _StopMotionAssembleOverlay(fromEditor: fromEditor),
         ],
       ),
+    );
+  }
+}
+
+/// Drives the stop-motion assemble step: a blocking progress overlay while
+/// encoding, navigation to the editor on success, and a snackbar on failure.
+class _StopMotionAssembleOverlay extends ConsumerWidget {
+  const _StopMotionAssembleOverlay({required this.fromEditor});
+
+  final bool fromEditor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return BlocConsumer<VideoRecorderBloc, VideoRecorderBlocState>(
+      listenWhen: (previous, current) =>
+          previous.stopMotionStatus != current.stopMotionStatus,
+      listener: (context, state) {
+        switch (state.stopMotionStatus) {
+          case StopMotionStatus.ready:
+            if (fromEditor) {
+              context.pop(true);
+            } else {
+              unawaited(openVideoEditorFromRecorder(context, ref));
+            }
+          case StopMotionStatus.failure:
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  context.l10n.videoRecorderStopMotionAssembleFailed,
+                ),
+              ),
+            );
+          case StopMotionStatus.idle:
+          case StopMotionStatus.assembling:
+            break;
+        }
+      },
+      buildWhen: (previous, current) =>
+          previous.stopMotionStatus != current.stopMotionStatus,
+      builder: (context, state) {
+        // The spinner animates continuously, so only mount it while assembling
+        // (a permanently-animating child never lets `pumpAndSettle` settle).
+        if (state.stopMotionStatus != StopMotionStatus.assembling) {
+          return const SizedBox.shrink();
+        }
+        return ColoredBox(
+          color: VineTheme.surfaceBackground.withValues(alpha: 0.7),
+          child: Center(
+            child: Column(
+              mainAxisSize: .min,
+              spacing: 16,
+              children: [
+                const CircularProgressIndicator(color: VineTheme.primary),
+                Text(
+                  context.l10n.videoRecorderStopMotionAssembling,
+                  style: VineTheme.bodyMediumFont(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

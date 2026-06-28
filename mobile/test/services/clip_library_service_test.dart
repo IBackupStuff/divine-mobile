@@ -47,7 +47,7 @@ void main() {
         expect(clips.first.id, 'clip_123');
         // Path uses platform separator, so check filename
         expect(
-          await clips.first.video.safeFilePath(),
+          await clips.first.requireVideo.safeFilePath(),
           endsWith('test_video.mp4'),
         );
       });
@@ -446,7 +446,7 @@ void main() {
       expect(restored.id, original.id);
       expect(restored.libraryTitle, original.libraryTitle);
       // Path uses platform separator, check it ends with filename
-      expect(await restored.video.safeFilePath(), endsWith('video.mp4'));
+      expect(await restored.requireVideo.safeFilePath(), endsWith('video.mp4'));
       expect(restored.thumbnailPath, endsWith('thumb.jpg'));
       expect(restored.duration, original.duration);
       expect(restored.recordedAt, original.recordedAt);

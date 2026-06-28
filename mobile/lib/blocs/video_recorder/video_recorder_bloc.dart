@@ -22,6 +22,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' as model show AspectRatio, AudioSourceKind;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
@@ -30,6 +31,7 @@ import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dar
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/haptic_service.dart';
+import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -220,6 +222,15 @@ class VideoRecorderBloc
       _onShowLastClipOverlayToggled,
     );
     on<VideoRecorderGridLinesToggled>(_onGridLinesToggled);
+    on<VideoRecorderStopMotionFrameCaptured>(
+      _onStopMotionFrameCaptured,
+      transformer: droppable(),
+    );
+    on<VideoRecorderStopMotionFrameUndone>(_onStopMotionFrameUndone);
+    on<VideoRecorderStopMotionAssembleRequested>(
+      _onStopMotionAssembleRequested,
+      transformer: droppable(),
+    );
     on<_VideoRecorderCameraStateChanged>(_onCameraStateChanged);
     on<_VideoRecorderRemoteRecordTriggered>(_onRemoteRecordTriggered);
     on<_VideoRecorderAutoStopped>(_onAutoStopped);
@@ -614,6 +625,11 @@ class VideoRecorderBloc
       return;
     }
 
+    if (state.recorderMode.capturesStills) {
+      add(const VideoRecorderStopMotionFrameCaptured());
+      return;
+    }
+
     switch (state.recordingState) {
       case VideoRecorderState.idle:
         add(const VideoRecorderRecordingStartRequested());
@@ -627,6 +643,11 @@ class VideoRecorderBloc
     VideoRecorderRecordingStartRequested event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    // Stop-motion captures stills via VideoRecorderStopMotionFrameCaptured;
+    // a video-record start here would be a no-op at best and corrupt the
+    // session at worst.
+    if (state.recorderMode.capturesStills) return;
+
     final clipManager = _readClipManager();
     final remainingDuration = clipManager.remainingDuration;
 
@@ -1354,6 +1375,7 @@ class VideoRecorderBloc
     required bool keepAutosavedDraft,
   }) {
     final previousMode = state.recorderMode;
+    final previousFrames = state.stopMotionFrames;
     emit(
       state.copyWith(
         recorderMode: mode,
@@ -1363,8 +1385,13 @@ class VideoRecorderBloc
             ? state.timerDuration
             : TimerDuration.off,
         countdownValue: 0,
+        stopMotionFrames: const [],
+        stopMotionStatus: StopMotionStatus.idle,
       ),
     );
+    if (previousFrames.isNotEmpty) {
+      unawaited(_deleteFrameFiles(previousFrames));
+    }
     final prefs = _readSharedPreferences();
     prefs.setString(VideoRecorderMode.persistenceKey, mode.name);
 
@@ -1411,7 +1438,11 @@ class VideoRecorderBloc
       name: 'VideoRecorderBloc',
       category: LogCategory.video,
     );
+    final frames = state.stopMotionFrames;
     emit(const VideoRecorderBlocState());
+    if (frames.isNotEmpty) {
+      unawaited(_deleteFrameFiles(frames));
+    }
   }
 
   void _onShowLastClipOverlayToggled(
@@ -1426,6 +1457,153 @@ class VideoRecorderBloc
     Emitter<VideoRecorderBlocState> emit,
   ) {
     emit(state.copyWith(showGridLines: !state.showGridLines));
+  }
+
+  // === Stop-motion handlers ===
+
+  /// Captures one still and appends it to [state.stopMotionFrames].
+  ///
+  /// No video is rendered here — encoding one video per tap is far too slow
+  /// (seconds per frame). Frames are encoded into a single video only on
+  /// [VideoRecorderStopMotionAssembleRequested], so capture stays instant.
+  Future<void> _onStopMotionFrameCaptured(
+    VideoRecorderStopMotionFrameCaptured event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) async {
+    if (!_cameraService.isInitialized || _cameraService.isSwitchingCamera) {
+      return;
+    }
+
+    unawaited(HapticService.recordingFeedback());
+
+    final photo = await _cameraService.capturePhoto();
+    if (photo == null) {
+      Log.warning(
+        '📷 Stop-motion frame capture returned no result',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        stopMotionFrames: [...state.stopMotionFrames, photo.filePath],
+        stopMotionStatus: StopMotionStatus.idle,
+      ),
+    );
+  }
+
+  /// Removes the last captured stop-motion frame and deletes its file.
+  Future<void> _onStopMotionFrameUndone(
+    VideoRecorderStopMotionFrameUndone event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) async {
+    final frames = state.stopMotionFrames;
+    if (frames.isEmpty) return;
+
+    final removed = frames.last;
+    emit(
+      state.copyWith(stopMotionFrames: frames.sublist(0, frames.length - 1)),
+    );
+    unawaited(_deleteFrameFile(removed));
+  }
+
+  /// Saves the captured frames as a frames-based stop-motion clip in the clip
+  /// manager (and the library), then emits [StopMotionStatus.ready].
+  ///
+  /// The frames are the source of truth; no mp4 is rendered here. The editor
+  /// previews the frames via the stop-motion player and only renders an mp4 at
+  /// publish.
+  Future<void> _onStopMotionAssembleRequested(
+    VideoRecorderStopMotionAssembleRequested event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) async {
+    final frames = state.stopMotionFrames;
+    if (frames.isEmpty) return;
+
+    emit(state.copyWith(stopMotionStatus: StopMotionStatus.assembling));
+
+    try {
+      await _ingestStopMotionClip(frames);
+    } catch (e, stackTrace) {
+      Log.warning(
+        '⚠️ Stop-motion ingest failed',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      addError(e, stackTrace);
+      emit(state.copyWith(stopMotionStatus: StopMotionStatus.failure));
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        stopMotionStatus: StopMotionStatus.ready,
+        stopMotionFrames: const [],
+      ),
+    );
+  }
+
+  /// Adds the captured [framePaths] to the clip manager as a frames-based
+  /// stop-motion clip and saves it to the library. Frame files are kept (not
+  /// deleted) since they are the clip's source of truth.
+  Future<void> _ingestStopMotionClip(List<String> framePaths) async {
+    final clipManager = _readClipManager();
+
+    final perFrame = Duration(
+      microseconds:
+          (Duration.microsecondsPerSecond /
+                  StopMotionRenderService.defaultFrameRate)
+              .round(),
+    );
+    final frames = [
+      for (final path in framePaths)
+        StopMotionClipFrame(path: path, duration: perFrame),
+    ];
+
+    final clip = clipManager.addStopMotionClip(
+      frames: frames,
+      originalAspectRatio: state.aspectRatio.value,
+      targetAspectRatio: state.aspectRatio,
+      duration: perFrame * frames.length,
+      thumbnailPath: framePaths.first,
+      lensMetadata: _cameraService.currentLensMetadata,
+    );
+
+    final updatedClip = clipManager.clips.firstWhere(
+      (c) => c.id == clip.id,
+      orElse: () => clip,
+    );
+    final saved = await clipManager.saveClipToLibrary(updatedClip);
+    if (!saved) {
+      Log.warning(
+        '⚠️ Stop-motion clip save to library failed for ${clip.id}',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  /// Deletes all captured stop-motion frame files, ignoring errors.
+  Future<void> _deleteFrameFiles(List<String> paths) async {
+    for (final path in paths) {
+      await _deleteFrameFile(path);
+    }
+  }
+
+  /// Deletes a captured stop-motion frame file, ignoring errors.
+  Future<void> _deleteFrameFile(String path) async {
+    try {
+      final file = File(path);
+      if (file.existsSync()) await file.delete();
+    } catch (e) {
+      Log.warning(
+        '⚠️ Failed to delete stop-motion frame $path: $e',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
   }
 
   void _onCameraStateChanged(

@@ -7864,6 +7864,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Voeg audio toe vóór de opname';
 
   @override
+  String get videoRecorderStopMotionAssembling => 'Je video wordt gemaakt…';
+
+  @override
+  String get videoRecorderStopMotionAssembleFailed =>
+      'Kan de video niet maken. Probeer het opnieuw.';
+
+  @override
   String get videoRecorderToggleFlashLabel => 'Flitser in-/uitschakelen';
 
   @override

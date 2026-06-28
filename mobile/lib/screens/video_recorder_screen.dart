@@ -439,7 +439,11 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
                         (VideoRecorderBloc b) => b.state.recorderMode,
                       )) {
                         .upload => const VideoRecorderUploadStack(),
-                        .capture => VideoRecorderCaptureStack(
+                        // Stop-motion reuses the capture stack — each shutter
+                        // tap captures a still that becomes a 1-frame video
+                        // clip, so the capture flow (clips, library, editor,
+                        // ghost) applies unchanged.
+                        .capture || .stopMotion => VideoRecorderCaptureStack(
                           fromEditor: widget.fromEditor,
                         ),
                         .lipSync => const VideoRecorderLipSyncStack(),

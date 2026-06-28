@@ -81,8 +81,8 @@ class DraftStorageService {
               durationMs: clip.duration.inMilliseconds,
               recordedAt: clip.recordedAt,
               data: json.encode(clip.toJson()),
-              filePath: clip.video.file?.path != null
-                  ? p.basename(clip.video.file!.path)
+              filePath: clip.video?.file?.path != null
+                  ? p.basename(clip.video!.file!.path)
                   : null,
               thumbnailPath: clip.thumbnailPath != null
                   ? p.basename(clip.thumbnailPath!)
@@ -101,8 +101,8 @@ class DraftStorageService {
           publishAttempts: draft.publishAttempts,
           publishError: draft.publishError,
           data: json.encode(draftJson),
-          renderedFilePath: draft.finalRenderedClip?.video.file?.path != null
-              ? p.basename(draft.finalRenderedClip!.video.file!.path)
+          renderedFilePath: draft.finalRenderedClip?.video?.file?.path != null
+              ? p.basename(draft.finalRenderedClip!.video!.file!.path)
               : null,
           renderedThumbnailPath: draft.finalRenderedClip?.thumbnailPath != null
               ? p.basename(draft.finalRenderedClip!.thumbnailPath!)
@@ -178,25 +178,25 @@ class DraftStorageService {
     if (existingDraft != null) {
       final newFilePaths = <String?>{
         for (final clip in draft.clips) ...[
-          clip.video.file?.path,
+          clip.video?.file?.path,
           clip.thumbnailPath,
         ],
-        draft.finalRenderedClip?.video.file?.path,
+        draft.finalRenderedClip?.video?.file?.path,
         draft.finalRenderedClip?.thumbnailPath,
         draft.customThumbnailPath,
       };
 
       orphanedFiles = <String?>[
         for (final clip in existingDraft.clips) ...[
-          if (!newFilePaths.contains(clip.video.file?.path))
-            clip.video.file?.path,
+          if (!newFilePaths.contains(clip.video?.file?.path))
+            clip.video?.file?.path,
           if (!newFilePaths.contains(clip.thumbnailPath)) clip.thumbnailPath,
         ],
         if (existingDraft.finalRenderedClip != null) ...[
           if (!newFilePaths.contains(
-            existingDraft.finalRenderedClip?.video.file?.path,
+            existingDraft.finalRenderedClip?.video?.file?.path,
           ))
-            existingDraft.finalRenderedClip?.video.file?.path,
+            existingDraft.finalRenderedClip?.video?.file?.path,
           if (!newFilePaths.contains(
             existingDraft.finalRenderedClip?.thumbnailPath,
           ))
@@ -222,8 +222,8 @@ class DraftStorageService {
           durationMs: clip.duration.inMilliseconds,
           recordedAt: clip.recordedAt,
           data: json.encode(clip.toJson()),
-          filePath: clip.video.file?.path != null
-              ? p.basename(clip.video.file!.path)
+          filePath: clip.video?.file?.path != null
+              ? p.basename(clip.video!.file!.path)
               : null,
           thumbnailPath: clip.thumbnailPath != null
               ? p.basename(clip.thumbnailPath!)
@@ -242,8 +242,8 @@ class DraftStorageService {
       publishAttempts: draft.publishAttempts,
       publishError: draft.publishError,
       data: json.encode(draftJson),
-      renderedFilePath: draft.finalRenderedClip?.video.file?.path != null
-          ? p.basename(draft.finalRenderedClip!.video.file!.path)
+      renderedFilePath: draft.finalRenderedClip?.video?.file?.path != null
+          ? p.basename(draft.finalRenderedClip!.video!.file!.path)
           : null,
       renderedThumbnailPath: draft.finalRenderedClip?.thumbnailPath != null
           ? p.basename(draft.finalRenderedClip!.thumbnailPath!)
@@ -450,7 +450,7 @@ class DraftStorageService {
   /// Filter clips to only include those with existing video files.
   List<DivineVideoClip> _filterValidClips(List<DivineVideoClip> clips) {
     return clips.where((clip) {
-      final videoPath = clip.video.file?.path;
+      final videoPath = clip.video?.file?.path;
       if (videoPath == null) return false;
       return File(videoPath).existsSync();
     }).toList();
@@ -460,7 +460,7 @@ class DraftStorageService {
     final finalClip = draft.finalRenderedClip;
     if (finalClip == null) return draft;
 
-    final videoPath = finalClip.video.file?.path;
+    final videoPath = finalClip.video?.file?.path;
     if (videoPath != null && File(videoPath).existsSync()) return draft;
 
     Log.info(

@@ -237,7 +237,7 @@ class _VideoEditorTimelineClipStripState
     if (startClipIdx == -1 || endClipIdx == -1) return;
     final startClip = widget.clips[startClipIdx];
     final endClip = widget.clips[endClipIdx];
-    final sourcePath = startClip.video.file?.path;
+    final sourcePath = startClip.video?.file?.path;
     if (sourcePath == null) return;
 
     // Mark consumed only once seeding can actually run. Committing before
@@ -268,7 +268,7 @@ class _VideoEditorTimelineClipStripState
       ),
       timestampOffset: Duration.zero,
       rebaseOnPathChange: split.absoluteSplitPosition,
-      currentSourcePath: endClip.video.file?.path ?? sourcePath,
+      currentSourcePath: endClip.video?.file?.path ?? sourcePath,
     );
   }
 

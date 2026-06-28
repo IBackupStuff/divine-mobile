@@ -40,6 +40,7 @@ import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/nostr_creator_binding_service.dart';
+import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
@@ -234,9 +235,14 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
 
     for (final draft in pendingDrafts) {
       // Check if video file still exists before attempting resume
-      if (!kIsWeb && draft.clips.isNotEmpty) {
+      // Stop-motion drafts have no rendered video until publish, so there is
+      // no file to verify here — skip the existence check for them.
+      final firstClipVideo = draft.clips.isNotEmpty
+          ? draft.clips.first.video
+          : null;
+      if (!kIsWeb && firstClipVideo != null) {
         try {
-          final videoPath = await draft.clips.first.video.safeFilePath();
+          final videoPath = await firstClipVideo.safeFilePath();
           final videoFile = File(videoPath);
           if (!videoFile.existsSync()) {
             Log.warning(
@@ -341,12 +347,35 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         category: .video,
       );
 
+      // Stop-motion clips are stored as frames; render them to an mp4 (≥1s)
+      // on demand here so every downstream consumer sees a normal video clip.
+      final stopMotionFailedMessage =
+          context.l10n.videoRecorderStopMotionAssembleFailed;
+
       DivineVideoClip? finalRenderedClip = draft.finalRenderedClip;
       String? proofManifestJson = draft.proofManifestJson;
 
+      if (finalRenderedClip != null && finalRenderedClip.isStopMotion) {
+        final materialized = await StopMotionRenderService.materialize(
+          finalRenderedClip,
+        );
+        if (materialized == null) {
+          setError(stopMotionFailedMessage);
+          return;
+        }
+        finalRenderedClip = materialized;
+      }
+
       if (finalRenderedClip == null) {
         if (draft.clips.length == 1) {
-          finalRenderedClip = draft.clips.first;
+          final materialized = await StopMotionRenderService.materialize(
+            draft.clips.first,
+          );
+          if (materialized == null) {
+            setError(stopMotionFailedMessage);
+            return;
+          }
+          finalRenderedClip = materialized;
         } else {
           // Multiple clips without rendered output - render now
           Log.info(
@@ -579,7 +608,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     required DivineVideoClip clip,
     String? existingProofManifestJson,
   }) async {
-    final filePath = await clip.video.safeFilePath();
+    final filePath = await clip.requireVideo.safeFilePath();
 
     Log.info(
       '🔐 Generating proof manifest for video',

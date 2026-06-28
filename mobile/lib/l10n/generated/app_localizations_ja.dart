@@ -7514,6 +7514,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoRecorderLipSyncAddAudioFirst => '録画する前にオーディオを追加してください';
 
   @override
+  String get videoRecorderStopMotionAssembling => '動画を作成しています…';
+
+  @override
+  String get videoRecorderStopMotionAssembleFailed =>
+      '動画を作成できませんでした。もう一度お試しください。';
+
+  @override
   String get videoRecorderToggleFlashLabel => 'フラッシュを切り替え';
 
   @override

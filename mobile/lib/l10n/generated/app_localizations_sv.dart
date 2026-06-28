@@ -7830,6 +7830,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Lägg till ljud innan inspelning';
 
   @override
+  String get videoRecorderStopMotionAssembling => 'Skapar din video…';
+
+  @override
+  String get videoRecorderStopMotionAssembleFailed =>
+      'Det gick inte att skapa videon. Försök igen.';
+
+  @override
   String get videoRecorderToggleFlashLabel => 'Växla blixt';
 
   @override

@@ -144,8 +144,8 @@ Future<void> _fakeSplitClipThenRenderEnd({
     trimStart: Duration.zero,
   );
   onClipsCreated?.call(startClip, previewEndClip);
-  onClipRendered?.call(startClip, startClip.video);
-  onClipRendered?.call(renderedEndClip, renderedEndClip.video);
+  onClipRendered?.call(startClip, startClip.requireVideo);
+  onClipRendered?.call(renderedEndClip, renderedEndClip.requireVideo);
 }
 
 Future<void> _fakeSplitClipThenFail({
@@ -1401,7 +1401,7 @@ void main() {
         ],
         verify: (bloc) {
           expect(
-            bloc.state.clips.first.video.file?.path,
+            bloc.state.clips.first.requireVideo.file?.path,
             equals('/reversed/clip-local_clip-local.mp4'),
           );
         },
@@ -1433,7 +1433,7 @@ void main() {
           isA<ClipEditorState>()
               .having((s) => s.clips.first.reversed, 'reversed', isFalse)
               .having(
-                (s) => s.clips.first.video.file?.path,
+                (s) => s.clips.first.requireVideo.file?.path,
                 'videoPath',
                 '/path/clip-local.mp4',
               )
@@ -1472,7 +1472,7 @@ void main() {
           isA<ClipEditorState>()
               .having((s) => s.clips.first.reversed, 'reversed', isTrue)
               .having(
-                (s) => s.clips.first.video.file?.path,
+                (s) => s.clips.first.requireVideo.file?.path,
                 'videoPath',
                 '/reversed/clip-local_clip-local.mp4',
               )
@@ -1542,7 +1542,7 @@ void main() {
         ],
         verify: (bloc) {
           expect(
-            bloc.state.clips.first.video.file?.path,
+            bloc.state.clips.first.requireVideo.file?.path,
             equals('/reversed/clip-local_clip-local.mp4'),
           );
         },
@@ -1686,7 +1686,7 @@ void main() {
         ],
         verify: (bloc) {
           expect(
-            bloc.state.clips.first.video.file?.path,
+            bloc.state.clips.first.requireVideo.file?.path,
             equals('/transformed/clip-local_clip-local_transform.mp4'),
           );
         },

@@ -8005,6 +8005,13 @@ class AppLocalizationsRo extends AppLocalizations {
       'Adaugă audio înainte de înregistrare';
 
   @override
+  String get videoRecorderStopMotionAssembling => 'Se creează videoclipul…';
+
+  @override
+  String get videoRecorderStopMotionAssembleFailed =>
+      'Videoclipul nu a putut fi creat. Încearcă din nou.';
+
+  @override
   String get videoRecorderToggleFlashLabel => 'Activează/dezactivează blițul';
 
   @override

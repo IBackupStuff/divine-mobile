@@ -15,6 +15,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -346,6 +347,17 @@ class VideoEditorRenderService {
 
     if (clips.isEmpty) return null;
 
+    // Stop-motion clips store frames, not a video. Render their frames to a
+    // base mp4 first (with the ≥1s minimum-duration guard); the overlay /
+    // effects pass below then composites on top — both via pro_video_editor.
+    final renderClips = <DivineVideoClip>[];
+    for (final clip in clips) {
+      final materialized = await StopMotionRenderService.materialize(clip);
+      if (materialized == null) return null;
+      renderClips.add(materialized);
+    }
+    clips = renderClips;
+
     final effectiveTaskId = taskId ?? clips.first.id;
     final progressTracker = _RenderProgressTracker(
       taskId: effectiveTaskId,
@@ -452,7 +464,7 @@ class VideoEditorRenderService {
         continue;
       }
 
-      final videoFile = clip.video.file;
+      final videoFile = clip.requireVideo.file;
       if (videoFile == null) {
         result.add(clip);
         onClipProcessed?.call();
@@ -597,7 +609,7 @@ class VideoEditorRenderService {
     required ValueChanged<bool> onComplete,
   }) async {
     try {
-      final inputPath = await clip.video.safeFilePath();
+      final inputPath = await clip.requireVideo.safeFilePath();
 
       // Write to a new temporary file to avoid file locking issues
       final tempDir = await getTemporaryDirectory();
@@ -611,7 +623,7 @@ class VideoEditorRenderService {
         outputPath,
         VideoRenderData(
           id: taskId,
-          videoSegments: [VideoSegment(video: clip.video)],
+          videoSegments: [VideoSegment(video: clip.requireVideo)],
           endTime: duration,
         ),
       );
@@ -747,7 +759,7 @@ class VideoEditorRenderService {
         segments: clips
             .map(
               (c) => VideoSegment(
-                video: c.video,
+                video: c.requireVideo,
                 startTime: c.trimStart == .zero ? null : c.trimStart,
                 endTime: c.trimStart + c.trimmedDuration,
                 volume: c.volume,
@@ -790,7 +802,7 @@ class VideoEditorRenderService {
       if (!needsCrop) {
         segments.add(
           VideoSegment(
-            video: entry.clip.video,
+            video: entry.clip.requireVideo,
             startTime: entry.clip.trimStart == .zero
                 ? null
                 : entry.clip.trimStart,
@@ -832,7 +844,9 @@ class VideoEditorRenderService {
     final entries = <_ClipAnalysisEntry>[];
 
     for (final clip in clips) {
-      final metaData = await ProVideoEditor.instance.getMetadata(clip.video);
+      final metaData = await ProVideoEditor.instance.getMetadata(
+        clip.requireVideo,
+      );
       final resolution = metaData.resolution;
       final cropParams = _CropParameters.forAspectRatio(
         resolution: resolution,
@@ -867,7 +881,7 @@ class VideoEditorRenderService {
       id: '${clip.id}_normalized',
       videoSegments: [
         VideoSegment(
-          video: clip.video,
+          video: clip.requireVideo,
           startTime: clip.trimStart == .zero ? null : clip.trimStart,
           endTime: clip.trimStart + clip.trimmedDuration,
           volume: clip.volume,

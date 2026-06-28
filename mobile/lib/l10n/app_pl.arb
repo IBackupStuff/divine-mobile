@@ -2753,6 +2753,8 @@
     "videoRecorderCaptureCloseLabel": "Zamknij",
     "videoRecorderCaptureNextLabel": "Dalej",
     "videoRecorderLipSyncAddAudioFirst": "Dodaj audio przed nagraniem",
+    "videoRecorderStopMotionAssembling": "Tworzenie filmu…",
+    "videoRecorderStopMotionAssembleFailed": "Nie udało się utworzyć filmu. Spróbuj ponownie.",
     "videoRecorderToggleFlashLabel": "Przełącz lampę błyskową",
     "videoRecorderCycleTimerLabel": "Zmień timer",
     "videoRecorderToggleAspectRatioLabel": "Przełącz proporcje",

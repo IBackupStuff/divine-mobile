@@ -3313,6 +3313,8 @@
     "videoRecorderCaptureCloseLabel": "ገጠመ",
     "videoRecorderCaptureNextLabel": "ቀጥሎ",
     "videoRecorderLipSyncAddAudioFirst": "ከመቅረጽ በፊት ኦዲዮ ያክሉ",
+    "videoRecorderStopMotionAssembling": "ቪዲዮዎን በመፍጠር ላይ…",
+    "videoRecorderStopMotionAssembleFailed": "ቪዲዮውን መፍጠር አልተቻለም። እንደገና ይሞክሩ።",
     "videoRecorderToggleFlashLabel": "ብልጭታ ቀያይር",
     "videoRecorderCycleTimerLabel": "የዑደት ሰዓት ቆጣሪ",
     "videoRecorderToggleAspectRatioLabel": "ምጥጥን ቀያይር",
