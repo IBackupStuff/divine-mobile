@@ -3196,6 +3196,22 @@ class AppLocalizationsSv extends AppLocalizations {
       'Den här mejladressen är redan registrerad. Logga in i stället.';
 
   @override
+  String get authVerificationErrorPinInvalid =>
+      'That code didn\'t match. Double-check it and try again.';
+
+  @override
+  String get authVerificationErrorPinExpired =>
+      'That code has expired. Tap resend to get a new one.';
+
+  @override
+  String get authVerificationErrorPinLocked =>
+      'Too many tries. Tap resend to get a fresh code.';
+
+  @override
+  String get authVerificationErrorPinFailed =>
+      'We couldn\'t verify that code. Please try again.';
+
+  @override
   String get authInviteErrorAlreadyUsed =>
       'Den inbjudningskoden är inte längre tillgänglig. Gå tillbaka till din inbjudningskod, gå med i väntelistan eller kontakta supporten.';
 

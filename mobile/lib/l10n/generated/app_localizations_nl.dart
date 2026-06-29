@@ -3213,6 +3213,22 @@ class AppLocalizationsNl extends AppLocalizations {
       'Dit e-mailadres is al geregistreerd. Log in plaats daarvan in.';
 
   @override
+  String get authVerificationErrorPinInvalid =>
+      'That code didn\'t match. Double-check it and try again.';
+
+  @override
+  String get authVerificationErrorPinExpired =>
+      'That code has expired. Tap resend to get a new one.';
+
+  @override
+  String get authVerificationErrorPinLocked =>
+      'Too many tries. Tap resend to get a fresh code.';
+
+  @override
+  String get authVerificationErrorPinFailed =>
+      'We couldn\'t verify that code. Please try again.';
+
+  @override
   String get authInviteErrorAlreadyUsed =>
       'Die invite-code is niet meer beschikbaar. Ga terug naar je invite-code, kom op de wachtlijst of neem contact op met support.';
 

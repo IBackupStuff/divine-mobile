@@ -3181,6 +3181,22 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu e-posta zaten kayıtlı. Bunun yerine giriş yap.';
 
   @override
+  String get authVerificationErrorPinInvalid =>
+      'That code didn\'t match. Double-check it and try again.';
+
+  @override
+  String get authVerificationErrorPinExpired =>
+      'That code has expired. Tap resend to get a new one.';
+
+  @override
+  String get authVerificationErrorPinLocked =>
+      'Too many tries. Tap resend to get a fresh code.';
+
+  @override
+  String get authVerificationErrorPinFailed =>
+      'We couldn\'t verify that code. Please try again.';
+
+  @override
   String get authInviteErrorAlreadyUsed =>
       'Bu davet kodu artık kullanılamıyor. Davet koduna geri dön, bekleme listesine katıl veya destekle iletişime geç.';
 

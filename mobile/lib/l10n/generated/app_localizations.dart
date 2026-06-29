@@ -5598,6 +5598,30 @@ abstract class AppLocalizations {
   /// **'This email is already registered. Sign in instead.'**
   String get authVerificationEmailAlreadyRegistered;
 
+  /// No description provided for @authVerificationErrorPinInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That code didn\'t match. Double-check it and try again.'**
+  String get authVerificationErrorPinInvalid;
+
+  /// No description provided for @authVerificationErrorPinExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'That code has expired. Tap resend to get a new one.'**
+  String get authVerificationErrorPinExpired;
+
+  /// No description provided for @authVerificationErrorPinLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many tries. Tap resend to get a fresh code.'**
+  String get authVerificationErrorPinLocked;
+
+  /// No description provided for @authVerificationErrorPinFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t verify that code. Please try again.'**
+  String get authVerificationErrorPinFailed;
+
   /// No description provided for @authInviteErrorAlreadyUsed.
   ///
   /// In en, this message translates to:

@@ -3040,6 +3040,22 @@ class AppLocalizationsJa extends AppLocalizations {
       'このメールアドレスはすでに登録されているよ。代わりにログインしてね。';
 
   @override
+  String get authVerificationErrorPinInvalid =>
+      'That code didn\'t match. Double-check it and try again.';
+
+  @override
+  String get authVerificationErrorPinExpired =>
+      'That code has expired. Tap resend to get a new one.';
+
+  @override
+  String get authVerificationErrorPinLocked =>
+      'Too many tries. Tap resend to get a fresh code.';
+
+  @override
+  String get authVerificationErrorPinFailed =>
+      'We couldn\'t verify that code. Please try again.';
+
+  @override
   String get authInviteErrorAlreadyUsed =>
       'その招待コードはもう使えないよ。招待コードに戻るか、ウェイトリストに参加するか、サポートに連絡してね。';
 

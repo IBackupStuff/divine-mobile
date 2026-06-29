@@ -400,6 +400,11 @@ class _EmailVerificationScreenState
                         email: state.pendingEmail,
                         isPollingMode: widget.isPollingMode || !_isTokenMode,
                       ),
+                      EmailVerificationStatus.pollingTimedOut =>
+                        _PollingContent(
+                          email: state.pendingEmail,
+                          isPollingMode: widget.isPollingMode || !_isTokenMode,
+                        ),
                       EmailVerificationStatus.success =>
                         const _SuccessContent(),
                       EmailVerificationStatus.failure => _ErrorContent(

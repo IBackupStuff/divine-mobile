@@ -11,11 +11,41 @@ enum EmailVerificationStatus {
   /// Actively polling for verification
   polling,
 
+  /// The 15-minute poll window elapsed without verification, but the screen
+  /// stays usable: the user can still enter the emailed PIN (or resend it)
+  /// instead of being dropped to a terminal "Start Over" dead end.
+  pollingTimedOut,
+
   /// Verification completed successfully
   success,
 
   /// Polling failed with an error
   failure,
+}
+
+/// Status of an in-app PIN submission, surfaced alongside [polling] /
+/// [pollingTimedOut] so PIN feedback never replaces the link/poll affordances.
+enum PinSubmissionStatus {
+  /// No PIN submission in flight.
+  idle,
+
+  /// A PIN is being verified against the server.
+  submitting,
+
+  /// The last PIN submission failed; see [EmailVerificationState.pinErrorCode].
+  failure,
+}
+
+/// Status of the "resend verification email" affordance.
+enum ResendStatus {
+  /// Resend is available.
+  idle,
+
+  /// A resend request is in flight.
+  sending,
+
+  /// Resend is on its post-send 5-minute cooldown.
+  cooldown,
 }
 
 /// Reason codes for a verification failure.
@@ -62,6 +92,18 @@ enum EmailVerificationError {
 
   /// Invite activation failed for an unspecified reason.
   inviteUnknown,
+
+  /// The submitted PIN was incorrect.
+  pinInvalid,
+
+  /// The submitted PIN (or its verify window) has expired.
+  pinExpired,
+
+  /// The PIN is locked after too many failed attempts; a resend is required.
+  pinLocked,
+
+  /// PIN verification failed for a network / server / unexpected reason.
+  pinFailed,
 }
 
 /// State for email verification polling
@@ -72,6 +114,10 @@ final class EmailVerificationState extends Equatable {
     this.errorCode,
     this.showInviteGateRecovery = false,
     this.inviteRecoveryCode,
+    this.pinStatus = PinSubmissionStatus.idle,
+    this.pinErrorCode,
+    this.resendStatus = ResendStatus.idle,
+    this.resendCooldownSeconds = 0,
   });
 
   /// Current polling status
@@ -92,6 +138,21 @@ final class EmailVerificationState extends Equatable {
   /// Invite code to prefill when recovering through the invite gate.
   final String? inviteRecoveryCode;
 
+  /// Status of the in-app PIN submission.
+  final PinSubmissionStatus pinStatus;
+
+  /// Reason code for the last PIN failure. Read by the UI only when
+  /// [pinStatus] is [PinSubmissionStatus.failure]; mapped to localized copy
+  /// the same way as [errorCode] — never a raw English string.
+  final EmailVerificationError? pinErrorCode;
+
+  /// Status of the resend-verification affordance.
+  final ResendStatus resendStatus;
+
+  /// Seconds remaining on the resend cooldown (0 when [resendStatus] is not
+  /// [ResendStatus.cooldown]).
+  final int resendCooldownSeconds;
+
   /// Whether currently polling
   bool get isPolling => status == EmailVerificationStatus.polling;
 
@@ -101,6 +162,10 @@ final class EmailVerificationState extends Equatable {
     EmailVerificationError? errorCode,
     bool? showInviteGateRecovery,
     String? inviteRecoveryCode,
+    PinSubmissionStatus? pinStatus,
+    EmailVerificationError? pinErrorCode,
+    ResendStatus? resendStatus,
+    int? resendCooldownSeconds,
   }) {
     return EmailVerificationState(
       status: status ?? this.status,
@@ -109,6 +174,11 @@ final class EmailVerificationState extends Equatable {
       showInviteGateRecovery:
           showInviteGateRecovery ?? this.showInviteGateRecovery,
       inviteRecoveryCode: inviteRecoveryCode ?? this.inviteRecoveryCode,
+      pinStatus: pinStatus ?? this.pinStatus,
+      pinErrorCode: pinErrorCode ?? this.pinErrorCode,
+      resendStatus: resendStatus ?? this.resendStatus,
+      resendCooldownSeconds:
+          resendCooldownSeconds ?? this.resendCooldownSeconds,
     );
   }
 
@@ -119,5 +189,9 @@ final class EmailVerificationState extends Equatable {
     errorCode,
     showInviteGateRecovery,
     inviteRecoveryCode,
+    pinStatus,
+    pinErrorCode,
+    resendStatus,
+    resendCooldownSeconds,
   ];
 }
