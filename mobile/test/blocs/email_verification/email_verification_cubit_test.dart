@@ -1735,6 +1735,60 @@ void main() {
     });
 
     group('poll timeout keeps PIN entry available', () {
+      test(
+        'an in-flight poll that resumes after timeout does not reschedule',
+        () {
+          when(() => mockAuthService.isAuthenticated).thenReturn(false);
+          when(() => mockAuthService.isRegistered).thenReturn(false);
+
+          // Each poll hangs for ~1000s so a poll is still in flight when the
+          // 15-minute timeout fires, and the resume is driven by the fake clock
+          // (a timer) rather than a microtask — making the recursion-guard
+          // decision observable via elapse().
+          var pollCalls = 0;
+          when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
+            _,
+          ) async {
+            pollCalls++;
+            await Future<void>.delayed(const Duration(seconds: 1000));
+            return PollResult.pending();
+          });
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+              );
+
+            // First poll fires at +3s and is still in flight (resolves ~1003s).
+            fake.elapse(const Duration(seconds: 4));
+            expect(pollCalls, 1);
+
+            // The 15-minute timeout fires while the poll is still in flight.
+            fake.elapse(const Duration(minutes: 15));
+            expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
+
+            // Drive past the in-flight poll's resolution (~1003s). It must NOT
+            // re-arm the poll loop — _onTimeout retains the pending device code
+            // for PIN entry, but the poll loop is over. Without the guard, the
+            // resumed poll reschedules and pollCalls climbs.
+            fake.elapse(const Duration(minutes: 10));
+
+            expect(
+              pollCalls,
+              1,
+              reason: 'a poll resuming after timeout must not reschedule',
+            );
+            expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
+
+            cubit.close();
+            fake.flushMicrotasks();
+          });
+        },
+      );
+
       test('timeout transitions to pollingTimedOut, not failure', () {
         when(() => mockAuthService.isAuthenticated).thenReturn(false);
         when(() => mockAuthService.isRegistered).thenReturn(false);

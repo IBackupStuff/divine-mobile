@@ -201,7 +201,15 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       // _pendingDeviceCode, which stops the recursion cleanly. Using the
       // pending state — not _pollTimer — as the guard keeps intent explicit
       // and survives future cleanup paths that forget to clear the timer.
-      if (!isClosed && _pendingDeviceCode != null) {
+      //
+      // Also bail once the poll window has elapsed: _onTimeout keeps the
+      // pending device code (so PIN entry still works) but the poll loop must
+      // stop. Without this, an in-flight _poll() resuming after the timeout
+      // would re-arm the timer and poll forever. resumePollingAfterTimeout()
+      // restarts cleanly via startPolling when a late link click warrants it.
+      if (!isClosed &&
+          _pendingDeviceCode != null &&
+          state.status != EmailVerificationStatus.pollingTimedOut) {
         _schedulePoll();
       }
     });
