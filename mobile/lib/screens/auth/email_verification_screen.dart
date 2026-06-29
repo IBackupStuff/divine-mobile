@@ -244,6 +244,11 @@ class _EmailVerificationScreenState
       return;
     }
 
+    // A late link click after the 15-minute poll window: re-arm polling so it
+    // auto-completes instead of waiting on manual PIN entry. No-ops unless the
+    // cubit is in pollingTimedOut with retained context.
+    _cubit.resumePollingAfterTimeout();
+
     Log.info(
       'Email verification successful from token update',
       name: 'EmailVerificationScreen',

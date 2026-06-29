@@ -460,6 +460,32 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
     _timeoutTimer = null;
   }
 
+  /// Re-arm polling after a [EmailVerificationStatus.pollingTimedOut], reusing
+  /// the device code / verifier the timeout retained.
+  ///
+  /// Used when a late email-link click marks the email verified on the server
+  /// *after* the 15-minute poll window already elapsed: re-arming lets the next
+  /// poll pick up the completion so the flow auto-finishes instead of waiting
+  /// on manual PIN entry. No-ops unless we are timed out and still hold the
+  /// pending context.
+  void resumePollingAfterTimeout() {
+    if (state.status != EmailVerificationStatus.pollingTimedOut) return;
+    final deviceCode = _pendingDeviceCode;
+    final verifier = _pendingVerifier;
+    if (deviceCode == null || verifier == null) return;
+    Log.info(
+      'Re-arming polling after timeout following a late verifyEmail',
+      name: 'EmailVerificationCubit',
+      category: LogCategory.auth,
+    );
+    startPolling(
+      deviceCode: deviceCode,
+      verifier: verifier,
+      email: state.pendingEmail ?? '',
+      inviteCode: _pendingInviteCode,
+    );
+  }
+
   /// Submit the 6-digit PIN the user read from the verification email.
   ///
   /// On success keycast returns the OAuth authorization code synchronously,

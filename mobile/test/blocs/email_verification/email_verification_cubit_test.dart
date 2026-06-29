@@ -1671,6 +1671,69 @@ void main() {
       });
     });
 
+    group('resumePollingAfterTimeout', () {
+      const lateCode = 'late-poll-code';
+
+      test('re-arms polling and completes after a late link click', () {
+        when(() => mockAuthService.isAuthenticated).thenReturn(false);
+        when(() => mockAuthService.isRegistered).thenReturn(false);
+        when(() => mockAuthService.isAnonymous).thenReturn(false);
+        // Pending the whole 15-min window, so the cubit times out.
+        when(
+          () => mockOAuth.pollForCode(testDeviceCode),
+        ).thenAnswer((_) async => PollResult.pending());
+        when(
+          () => mockOAuth.exchangeCode(code: lateCode, verifier: testVerifier),
+        ).thenAnswer(
+          (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
+        );
+        when(
+          () => mockAuthService.signInWithDivineOAuth(any()),
+        ).thenAnswer((_) async {});
+
+        fakeAsync((fake) {
+          final cubit = buildCubit()
+            ..startPolling(
+              deviceCode: testDeviceCode,
+              verifier: testVerifier,
+              email: testEmail,
+            );
+
+          fake.elapse(const Duration(minutes: 16));
+          expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
+
+          // The late link click has now marked the email verified server-side,
+          // so the re-armed poll returns a code.
+          when(
+            () => mockOAuth.pollForCode(testDeviceCode),
+          ).thenAnswer((_) async => PollResult.complete(lateCode));
+
+          cubit.resumePollingAfterTimeout();
+          fake.elapse(const Duration(seconds: 4));
+
+          expect(cubit.state.status, EmailVerificationStatus.success);
+          verify(
+            () =>
+                mockOAuth.exchangeCode(code: lateCode, verifier: testVerifier),
+          ).called(1);
+
+          cubit.close();
+          fake.flushMicrotasks();
+        });
+      });
+
+      test('no-ops when not timed out', () {
+        final cubit = buildCubit();
+
+        cubit.resumePollingAfterTimeout();
+
+        expect(cubit.state.status, EmailVerificationStatus.initial);
+        verifyNever(() => mockOAuth.pollForCode(any()));
+
+        cubit.close();
+      });
+    });
+
     group('poll timeout keeps PIN entry available', () {
       test('timeout transitions to pollingTimedOut, not failure', () {
         when(() => mockAuthService.isAuthenticated).thenReturn(false);

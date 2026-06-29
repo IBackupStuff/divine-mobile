@@ -680,6 +680,65 @@ void main() {
           ).called(1);
         },
       );
+
+      testWidgets(
+        'late link click after timeout re-arms polling on verifyEmail success',
+        (tester) async {
+          final tokenNotifier = ValueNotifier<String>('token-1');
+          const timedOutState = EmailVerificationState(
+            status: EmailVerificationStatus.pollingTimedOut,
+            pendingEmail: 'user@example.com',
+          );
+
+          when(() => mockCubit.state).thenReturn(timedOutState);
+          whenListen(
+            mockCubit,
+            const Stream<EmailVerificationState>.empty(),
+            initialState: timedOutState,
+          );
+          when(() => mockCubit.resumePollingAfterTimeout()).thenReturn(null);
+          when(
+            () => mockOAuth.verifyEmail(token: any(named: 'token')),
+          ).thenAnswer((_) async => VerifyEmailResult(success: true));
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                ...getStandardTestOverrides(mockAuthService: mockAuthService),
+                oauthClientProvider.overrideWithValue(mockOAuth),
+                pendingVerificationServiceProvider.overrideWithValue(
+                  mockPendingVerification,
+                ),
+                forceExploreTabNameProvider.overrideWith((ref) => null),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: VineTheme.theme,
+                home: BlocProvider<EmailVerificationCubit>.value(
+                  value: mockCubit,
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: tokenNotifier,
+                    builder: (context, token, _) =>
+                        EmailVerificationScreen(token: token),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 10));
+
+          // A late link click arrives while the screen sits in pollingTimedOut.
+          tokenNotifier.value = 'token-2';
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 10));
+
+          verify(() => mockOAuth.verifyEmail(token: 'token-2')).called(1);
+          verify(() => mockCubit.resumePollingAfterTimeout()).called(1);
+        },
+      );
     });
 
     group('PIN entry fallback', () {
