@@ -314,8 +314,8 @@ class _EmailVerificationScreenState
   void _handleCancel() {
     _cubit.stopPolling();
     // Don't clear pending verification data - user may still verify via email
-    // link later. Data will be cleared on: successful login, logout, or
-    // expiration (30 minutes).
+    // link or PIN later. Data will be cleared on: successful login, logout, or
+    // expiration (24h verify window).
     // Go back to previous screen (registration form)
     if (context.canPop()) {
       context.pop();

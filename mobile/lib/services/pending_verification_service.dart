@@ -21,9 +21,13 @@ class PendingVerification {
   final DateTime createdAt;
   final String? inviteCode;
 
-  /// Expiration duration for pending verification data (30 minutes).
-  /// OAuth device codes typically expire in 15-30 minutes.
-  static const expirationDuration = Duration(minutes: 30);
+  /// Expiration duration for pending verification data (24 hours).
+  ///
+  /// Matches keycast's 24h email-verify window (keycast#262). The deviceCode +
+  /// verifier must survive that long so a user who returns late — e.g. after
+  /// reading the PIN from their email hours later — still has the verifier to
+  /// exchange the synchronously-returned OAuth code.
+  static const expirationDuration = Duration(hours: 24);
 
   /// Check if this pending verification has expired
   bool get isExpired =>
@@ -83,7 +87,7 @@ class PendingVerificationService {
   /// Load pending verification data from secure storage.
   ///
   /// Returns null if no pending verification exists, data is incomplete,
-  /// or data has expired (after 30 minutes).
+  /// or data has expired (after the 24h verify window).
   Future<PendingVerification?> load() async {
     try {
       final results = await Future.wait([
