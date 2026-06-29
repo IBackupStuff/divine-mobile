@@ -179,9 +179,13 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       ),
     );
 
-    // Cancel any existing timers
+    // Cancel any existing timers. The resend cooldown timer is nulled too
+    // (it is not reassigned below, unlike the poll/timeout timers) so a re-init
+    // can't leave an orphaned Timer.periodic ticking onto the reset state.
     _pollTimer?.cancel();
     _timeoutTimer?.cancel();
+    _resendTimer?.cancel();
+    _resendTimer = null;
 
     _pollTickIndex = 0;
     _completionClaimed = false;

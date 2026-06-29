@@ -1669,6 +1669,54 @@ void main() {
           fake.flushMicrotasks();
         });
       });
+
+      test('startPolling cancels an active resend cooldown timer', () {
+        when(() => mockAuthService.isAuthenticated).thenReturn(false);
+        when(() => mockAuthService.isRegistered).thenReturn(false);
+        when(
+          () => mockOAuth.pollForCode(testDeviceCode),
+        ).thenAnswer((_) async => PollResult.pending());
+        when(
+          () => mockOAuth.resendVerification(testEmail),
+        ).thenAnswer((_) async => ResendVerificationResult(success: true));
+
+        fakeAsync((fake) {
+          final cubit = buildCubit()
+            ..startPolling(
+              deviceCode: testDeviceCode,
+              verifier: testVerifier,
+              email: testEmail,
+            );
+
+          unawaited(cubit.resendVerification());
+          fake.elapse(const Duration(milliseconds: 100));
+          expect(cubit.state.resendStatus, ResendStatus.cooldown);
+          expect(cubit.state.resendCooldownSeconds, 300);
+
+          // Re-init polling (e.g. re-arm after timeout, or a fresh
+          // registration). The cooldown timer must be cancelled so it cannot
+          // keep ticking onto the reset state.
+          cubit.startPolling(
+            deviceCode: testDeviceCode,
+            verifier: testVerifier,
+            email: testEmail,
+          );
+          expect(cubit.state.resendStatus, ResendStatus.idle);
+          expect(cubit.state.resendCooldownSeconds, 0);
+
+          // An orphaned cooldown timer would fire here and mutate the state.
+          fake.elapse(const Duration(seconds: 3));
+          expect(cubit.state.resendStatus, ResendStatus.idle);
+          expect(
+            cubit.state.resendCooldownSeconds,
+            0,
+            reason: 'orphaned resend timer must be cancelled on re-init',
+          );
+
+          cubit.close();
+          fake.flushMicrotasks();
+        });
+      });
     });
 
     group('resumePollingAfterTimeout', () {
