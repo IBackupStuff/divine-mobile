@@ -139,6 +139,80 @@ enum PollStatus {
   error, // Something went wrong
 }
 
+/// Reason a [VerifyPinResult] failed.
+///
+/// keycast intentionally returns uniform anti-enumeration errors, so the
+/// server may collapse several of these into one generic failure. Callers
+/// should treat distinct cases as advisory and fall back to generic copy.
+enum VerifyPinError {
+  /// The submitted PIN was incorrect.
+  invalid,
+
+  /// The PIN (or its 24h verification window) has expired.
+  expired,
+
+  /// Too many failed attempts — the PIN is locked until a new one is sent.
+  locked,
+
+  /// Transient network error or timeout.
+  network,
+
+  /// Server returned a 5xx or otherwise unexpected/malformed response.
+  server,
+}
+
+/// Result from POST /api/headless/verify-pin
+class VerifyPinResult {
+  final bool success;
+
+  /// OAuth authorization code, returned synchronously on success.
+  final String? code;
+
+  /// Reason code on failure (null on success).
+  final VerifyPinError? errorCode;
+
+  /// Human-readable description from the server, for logs only — never shown
+  /// to the user (the UI localizes [errorCode]).
+  final String? errorDescription;
+
+  VerifyPinResult({
+    required this.success,
+    this.code,
+    this.errorCode,
+    this.errorDescription,
+  });
+
+  factory VerifyPinResult.success(String code) =>
+      VerifyPinResult(success: true, code: code);
+
+  factory VerifyPinResult.failure(
+    VerifyPinError errorCode, {
+    String? description,
+  }) => VerifyPinResult(
+    success: false,
+    errorCode: errorCode,
+    errorDescription: description,
+  );
+}
+
+/// Result from POST /api/auth/resend-verification
+class ResendVerificationResult {
+  final bool success;
+  final String? message;
+
+  ResendVerificationResult({required this.success, this.message});
+
+  factory ResendVerificationResult.fromJson(Map<String, dynamic> json) {
+    return ResendVerificationResult(
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String?,
+    );
+  }
+
+  factory ResendVerificationResult.failure() =>
+      ResendVerificationResult(success: false);
+}
+
 /// Result from POST /api/auth/forgot-password
 class ForgotPasswordResult {
   ForgotPasswordResult({required this.success, this.message, this.error});

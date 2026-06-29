@@ -775,6 +775,197 @@ void main() {
       });
     });
 
+    group('verifyPin', () {
+      test('returns success with code on 200 with code', () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, '/api/headless/verify-pin');
+          expect(request.method, 'POST');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['device_code'], 'device123');
+          expect(body['pin'], '123456');
+          return http.Response(jsonEncode({'code': 'auth_code_789'}), 200);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isTrue);
+        expect(result.code, 'auth_code_789');
+        expect(result.errorCode, isNull);
+      });
+
+      test('returns success on 201 with code', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'code': 'auth_code_789'}), 201);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isTrue);
+        expect(result.code, 'auth_code_789');
+      });
+
+      test('treats 200 without a code as a server error', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({}), 200);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.server);
+      });
+
+      test('maps 400 to an invalid-PIN error', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'error': 'invalid_pin',
+              'error_description': 'Incorrect code',
+            }),
+            400,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '000000',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.invalid);
+      });
+
+      test('maps an expired error code to an expired-PIN error', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'error': 'pin_expired'}), 410);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.expired);
+      });
+
+      test('maps a lockout response to a locked-PIN error', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'error': 'too_many_attempts'}), 429);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.locked);
+      });
+
+      test('maps a 5xx response to a server error', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('Internal Server Error', 500);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.server);
+      });
+
+      test('maps invalid JSON to a server error', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('not json {{{', 400);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.server);
+      });
+
+      test('maps a network failure to a network error', () async {
+        final mockClient = MockClient((request) async {
+          throw Exception('Network failure');
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.network);
+      });
+    });
+
+    group('resendVerification', () {
+      test('posts the email and returns success on 200', () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, '/api/auth/resend-verification');
+          expect(request.method, 'POST');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['email'], 'test@example.com');
+          return http.Response(
+            jsonEncode({'success': true, 'message': 'Sent'}),
+            200,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.resendVerification('test@example.com');
+
+        expect(result.success, isTrue);
+      });
+
+      test('returns success even when the body is not JSON', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('OK', 200);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.resendVerification('test@example.com');
+
+        expect(result.success, isTrue);
+      });
+
+      test('returns failure on a network error', () async {
+        final mockClient = MockClient((request) async {
+          throw Exception('Network failure');
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.resendVerification('test@example.com');
+
+        expect(result.success, isFalse);
+      });
+    });
+
     group('sendPasswordResetEmail', () {
       test('returns success on 200 response', () async {
         final mockClient = MockClient((request) async {
