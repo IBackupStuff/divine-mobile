@@ -5076,6 +5076,42 @@ abstract class AppLocalizations {
   /// **'Open email app'**
   String get authOpenEmailApp;
 
+  /// No description provided for @authVerificationPinPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Or enter the 6-digit code from your email'**
+  String get authVerificationPinPrompt;
+
+  /// No description provided for @authVerificationPinFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'6-digit code'**
+  String get authVerificationPinFieldLabel;
+
+  /// No description provided for @authVerificationPinSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify code'**
+  String get authVerificationPinSubmit;
+
+  /// No description provided for @authVerificationResendPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Didn\'t get it?'**
+  String get authVerificationResendPrompt;
+
+  /// No description provided for @authVerificationResend.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend'**
+  String get authVerificationResend;
+
+  /// Disabled-state label for the resend button during its cooldown. {time} is a preformatted m:ss countdown (e.g. 4:59).
+  ///
+  /// In en, this message translates to:
+  /// **'Resend in {time}'**
+  String authVerificationResendCooldown(String time);
+
   /// No description provided for @authWelcomeToDivine.
   ///
   /// In en, this message translates to:

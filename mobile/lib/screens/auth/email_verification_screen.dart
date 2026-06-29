@@ -11,6 +11,7 @@ import 'package:android_intent_plus/flag.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -404,6 +405,7 @@ class _EmailVerificationScreenState
                         _PollingContent(
                           email: state.pendingEmail,
                           isPollingMode: widget.isPollingMode || !_isTokenMode,
+                          isActivelyPolling: false,
                         ),
                       EmailVerificationStatus.success =>
                         const _SuccessContent(),
@@ -512,10 +514,19 @@ class _StatusButton extends StatelessWidget {
 
 /// Polling/loading content shown while waiting for email verification.
 class _PollingContent extends StatelessWidget {
-  const _PollingContent({required this.email, required this.isPollingMode});
+  const _PollingContent({
+    required this.email,
+    required this.isPollingMode,
+    this.isActivelyPolling = true,
+  });
 
   final String? email;
   final bool isPollingMode;
+
+  /// Whether the poll loop is still running. When the 15-minute window
+  /// elapses this becomes false: the spinner is dropped but PIN entry / resend
+  /// stay available instead of a terminal failure screen.
+  final bool isActivelyPolling;
 
   Future<void> _openEmailApp() async {
     Log.info(
@@ -580,94 +591,269 @@ class _PollingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Spacer(),
+    // Scroll-safe so the added PIN entry never overflows on short screens,
+    // while still vertically centering the content on tall ones.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  const Spacer(),
 
-        // Email sticker
-        Transform.rotate(
-          angle: -8 * pi / 180,
-          child: const DivineSticker(
-            sticker: DivineStickerName.email,
-            size: 120,
+                  // Email sticker
+                  Transform.rotate(
+                    angle: -8 * pi / 180,
+                    child: const DivineSticker(
+                      sticker: DivineStickerName.email,
+                      size: 120,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Title
+                  Text(
+                    isPollingMode
+                        ? context.l10n.authCompleteRegistration
+                        : context.l10n.authVerifying,
+                    style: const TextStyle(
+                      fontFamily: VineTheme.fontFamilyBricolage,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: VineTheme.whiteText,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+
+                  if (isPollingMode && email != null && email!.isNotEmpty) ...[
+                    Text(
+                      context.l10n.authVerificationLinkSent,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: VineTheme.secondaryText,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      email!,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: VineTheme.whiteText,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.authClickVerificationLink,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: VineTheme.secondaryText,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ] else ...[
+                    Text(
+                      context.l10n.authPleaseWaitVerifying,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: VineTheme.secondaryText,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+
+                  const Spacer(),
+
+                  // Status + action buttons at bottom
+                  Padding(
+                    padding: const EdgeInsets.only(top: 32, bottom: 32),
+                    child: Column(
+                      children: [
+                        if (isPollingMode) ...[
+                          const _PinEntrySection(),
+                          const SizedBox(height: 20),
+                        ],
+                        if (isActivelyPolling)
+                          _StatusButton(
+                            label: context.l10n.authWaitingForVerification,
+                          ),
+                        if (isPollingMode) ...[
+                          const SizedBox(height: 20),
+                          DivineButton(
+                            expanded: true,
+                            type: DivineButtonType.secondary,
+                            label: context.l10n.authOpenEmailApp,
+                            onPressed: _openEmailApp,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 32),
+        );
+      },
+    );
+  }
+}
 
-        // Title
+/// In-app PIN entry: a 6-digit code field the user reads from the verification
+/// email, submitted to keycast as a fallback when the email link / poll never
+/// completes (e.g. sandboxed in-app browsers). Additive — shown alongside the
+/// link/poll affordances, never replacing them.
+class _PinEntrySection extends StatefulWidget {
+  const _PinEntrySection();
+
+  @override
+  State<_PinEntrySection> createState() => _PinEntrySectionState();
+}
+
+class _PinEntrySectionState extends State<_PinEntrySection> {
+  static const _pinLength = 6;
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_controller.text.length != _pinLength) return;
+    if (context.read<EmailVerificationCubit>().state.pinStatus ==
+        PinSubmissionStatus.submitting) {
+      return;
+    }
+    context.read<EmailVerificationCubit>().submitPin(_controller.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final pinStatus = context.select(
+      (EmailVerificationCubit c) => c.state.pinStatus,
+    );
+    final pinErrorCode = context.select(
+      (EmailVerificationCubit c) => c.state.pinErrorCode,
+    );
+    final submitting = pinStatus == PinSubmissionStatus.submitting;
+    final errorText = pinStatus == PinSubmissionStatus.failure
+        ? l10n.emailVerificationErrorMessage(
+            pinErrorCode ?? EmailVerificationError.pinFailed,
+          )
+        : null;
+    final canSubmit = _controller.text.length == _pinLength && !submitting;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         Text(
-          isPollingMode
-              ? context.l10n.authCompleteRegistration
-              : context.l10n.authVerifying,
+          l10n.authVerificationPinPrompt,
           style: const TextStyle(
-            fontFamily: VineTheme.fontFamilyBricolage,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: VineTheme.whiteText,
+            fontSize: 14,
+            color: VineTheme.secondaryText,
+            height: 1.4,
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 16),
-
-        if (isPollingMode && email != null && email!.isNotEmpty) ...[
-          Text(
-            context.l10n.authVerificationLinkSent,
-            style: const TextStyle(
-              fontSize: 16,
-              color: VineTheme.secondaryText,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            email!,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: VineTheme.whiteText,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            context.l10n.authClickVerificationLink,
-            style: const TextStyle(
-              fontSize: 14,
-              color: VineTheme.secondaryText,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ] else ...[
-          Text(
-            context.l10n.authPleaseWaitVerifying,
-            style: const TextStyle(
-              fontSize: 16,
-              color: VineTheme.secondaryText,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-
-        const Spacer(),
-
-        // Status + action buttons at bottom
-        Padding(
-          padding: const EdgeInsets.only(bottom: 32),
-          child: Column(
-            children: [
-              _StatusButton(label: context.l10n.authWaitingForVerification),
-              if (isPollingMode) ...[
-                const SizedBox(height: 20),
-                DivineButton(
-                  expanded: true,
-                  label: context.l10n.authOpenEmailApp,
-                  onPressed: _openEmailApp,
-                ),
-              ],
+        const SizedBox(height: 12),
+        // Material wrap keeps the field's ink / overlay layer stable across the
+        // verification screen's route transitions.
+        Material(
+          type: MaterialType.transparency,
+          child: DivineAuthTextField(
+            label: l10n.authVerificationPinFieldLabel,
+            controller: _controller,
+            enabled: !submitting,
+            autocorrect: false,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(_pinLength),
             ],
+            errorText: errorText,
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _submit(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        DivineButton(
+          expanded: true,
+          label: l10n.authVerificationPinSubmit,
+          isLoading: submitting,
+          onPressed: canSubmit ? _submit : null,
+        ),
+        const SizedBox(height: 12),
+        const _ResendRow(),
+      ],
+    );
+  }
+}
+
+/// Resend-verification affordance with the 5-minute cooldown surfaced.
+class _ResendRow extends StatelessWidget {
+  const _ResendRow();
+
+  static String _formatCooldown(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final resendStatus = context.select(
+      (EmailVerificationCubit c) => c.state.resendStatus,
+    );
+    final cooldownSeconds = context.select(
+      (EmailVerificationCubit c) => c.state.resendCooldownSeconds,
+    );
+    final disabled = resendStatus != ResendStatus.idle;
+    final label = resendStatus == ResendStatus.cooldown
+        ? l10n.authVerificationResendCooldown(_formatCooldown(cooldownSeconds))
+        : l10n.authVerificationResend;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          l10n.authVerificationResendPrompt,
+          style: const TextStyle(
+            fontSize: 14,
+            color: VineTheme.secondaryText,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Semantics(
+          button: true,
+          enabled: !disabled,
+          label: l10n.authVerificationResend,
+          child: GestureDetector(
+            onTap: disabled
+                ? null
+                : () => context
+                      .read<EmailVerificationCubit>()
+                      .resendVerification(),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: disabled ? VineTheme.secondaryText : VineTheme.vineGreen,
+              ),
+            ),
           ),
         ),
       ],

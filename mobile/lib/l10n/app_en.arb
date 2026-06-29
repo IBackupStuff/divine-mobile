@@ -1646,6 +1646,18 @@
   "authPleaseWaitVerifying": "Please wait while we verify your email...",
   "authWaitingForVerification": "Waiting for verification",
   "authOpenEmailApp": "Open email app",
+  "authVerificationPinPrompt": "Or enter the 6-digit code from your email",
+  "authVerificationPinFieldLabel": "6-digit code",
+  "authVerificationPinSubmit": "Verify code",
+  "authVerificationResendPrompt": "Didn't get it?",
+  "authVerificationResend": "Resend",
+  "authVerificationResendCooldown": "Resend in {time}",
+  "@authVerificationResendCooldown": {
+    "description": "Disabled-state label for the resend button during its cooldown. {time} is a preformatted m:ss countdown (e.g. 4:59).",
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
   "authWelcomeToDivine": "Welcome to Divine!",
   "authEmailVerified": "Your email has been verified.",
   "authSigningYouIn": "Signing you in",

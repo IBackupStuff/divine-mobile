@@ -681,5 +681,141 @@ void main() {
         },
       );
     });
+
+    group('PIN entry fallback', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      const pollingState = EmailVerificationState(
+        status: EmailVerificationStatus.polling,
+        pendingEmail: 'user@example.com',
+      );
+
+      testWidgets('renders the PIN field, prompt, and submit in polling mode', (
+        tester,
+      ) async {
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          email: 'user@example.com',
+          initialState: pollingState,
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.authVerificationPinPrompt), findsOneWidget);
+        expect(find.byType(TextFormField), findsOneWidget);
+        expect(
+          find.widgetWithText(DivineButton, l10n.authVerificationPinSubmit),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('submitting a 6-digit PIN dispatches submitPin', (
+        tester,
+      ) async {
+        when(() => mockCubit.submitPin(any())).thenAnswer((_) async {});
+
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          email: 'user@example.com',
+          initialState: pollingState,
+        );
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextFormField), '123456');
+        await tester.pump();
+        await tester.tap(
+          find.widgetWithText(DivineButton, l10n.authVerificationPinSubmit),
+        );
+        await tester.pump();
+
+        verify(() => mockCubit.submitPin('123456')).called(1);
+      });
+
+      testWidgets('shows the localized error when a PIN submission failed', (
+        tester,
+      ) async {
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          email: 'user@example.com',
+          initialState: const EmailVerificationState(
+            status: EmailVerificationStatus.polling,
+            pendingEmail: 'user@example.com',
+            pinStatus: PinSubmissionStatus.failure,
+            pinErrorCode: EmailVerificationError.pinInvalid,
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.text(l10n.authVerificationErrorPinInvalid),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('surfaces the resend cooldown countdown', (tester) async {
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          email: 'user@example.com',
+          initialState: const EmailVerificationState(
+            status: EmailVerificationStatus.polling,
+            pendingEmail: 'user@example.com',
+            resendStatus: ResendStatus.cooldown,
+            resendCooldownSeconds: 299,
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.text(l10n.authVerificationResendCooldown('4:59')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('tapping resend dispatches resendVerification', (
+        tester,
+      ) async {
+        when(() => mockCubit.resendVerification()).thenAnswer((_) async {});
+
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          email: 'user@example.com',
+          initialState: pollingState,
+        );
+        await tester.pump();
+
+        await tester.tap(find.text(l10n.authVerificationResend));
+        await tester.pump();
+
+        verify(() => mockCubit.resendVerification()).called(1);
+      });
+
+      testWidgets('pollingTimedOut keeps PIN entry but drops the spinner', (
+        tester,
+      ) async {
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          email: 'user@example.com',
+          initialState: const EmailVerificationState(
+            status: EmailVerificationStatus.pollingTimedOut,
+            pendingEmail: 'user@example.com',
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.authVerificationPinPrompt), findsOneWidget);
+        expect(find.text(l10n.authWaitingForVerification), findsNothing);
+      });
+    });
   });
 }

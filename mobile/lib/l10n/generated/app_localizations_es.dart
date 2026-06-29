@@ -2935,6 +2935,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authOpenEmailApp => 'Abrir la app de email';
 
   @override
+  String get authVerificationPinPrompt =>
+      'Or enter the 6-digit code from your email';
+
+  @override
+  String get authVerificationPinFieldLabel => '6-digit code';
+
+  @override
+  String get authVerificationPinSubmit => 'Verify code';
+
+  @override
+  String get authVerificationResendPrompt => 'Didn\'t get it?';
+
+  @override
+  String get authVerificationResend => 'Resend';
+
+  @override
+  String authVerificationResendCooldown(String time) {
+    return 'Resend in $time';
+  }
+
+  @override
   String get authWelcomeToDivine => '¡Bienvenido a Divine!';
 
   @override
