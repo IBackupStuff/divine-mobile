@@ -570,18 +570,30 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
 
     emit(state.copyWith(resendStatus: ResendStatus.sending));
     try {
-      await _oauthClient.resendVerification(email);
+      final result = await _oauthClient.resendVerification(email);
+      if (result.success) {
+        _startResendCooldown();
+        return;
+      }
+      // The request reached the server but it declined to send. Leave resend
+      // available (idle) so the user can retry rather than locking them out of
+      // a working PIN for the full cooldown on a failed send.
+      Log.warning(
+        'Resend verification returned failure; keeping resend available',
+        name: 'EmailVerificationCubit',
+        category: LogCategory.auth,
+      );
+      emit(state.copyWith(resendStatus: ResendStatus.idle));
     } catch (e, stackTrace) {
-      // The server always responds success; a thrown error here is a transient
-      // network failure. Still start the cooldown so the button isn't spammed.
+      // Transient network failure — leave resend available to retry.
       Log.warning(
         'Resend verification request failed: $e',
         name: 'EmailVerificationCubit',
         category: LogCategory.auth,
       );
       addError(e, stackTrace);
+      emit(state.copyWith(resendStatus: ResendStatus.idle));
     }
-    _startResendCooldown();
   }
 
   void _startResendCooldown() {

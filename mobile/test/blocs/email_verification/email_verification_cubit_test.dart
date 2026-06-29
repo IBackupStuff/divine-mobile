@@ -1610,6 +1610,65 @@ void main() {
           fake.flushMicrotasks();
         });
       });
+
+      test('a failure() result does NOT enter cooldown', () {
+        when(() => mockAuthService.isAuthenticated).thenReturn(false);
+        when(() => mockAuthService.isRegistered).thenReturn(false);
+        when(
+          () => mockOAuth.pollForCode(testDeviceCode),
+        ).thenAnswer((_) async => PollResult.pending());
+        when(
+          () => mockOAuth.resendVerification(testEmail),
+        ).thenAnswer((_) async => ResendVerificationResult.failure());
+
+        fakeAsync((fake) {
+          final cubit = buildCubit()
+            ..startPolling(
+              deviceCode: testDeviceCode,
+              verifier: testVerifier,
+              email: testEmail,
+            );
+
+          unawaited(cubit.resendVerification());
+          fake.elapse(const Duration(milliseconds: 100));
+
+          // Resend stays available so the user can retry immediately.
+          expect(cubit.state.resendStatus, ResendStatus.idle);
+          expect(cubit.state.resendCooldownSeconds, 0);
+
+          cubit.close();
+          fake.flushMicrotasks();
+        });
+      });
+
+      test('a thrown error does NOT enter cooldown', () {
+        when(() => mockAuthService.isAuthenticated).thenReturn(false);
+        when(() => mockAuthService.isRegistered).thenReturn(false);
+        when(
+          () => mockOAuth.pollForCode(testDeviceCode),
+        ).thenAnswer((_) async => PollResult.pending());
+        when(
+          () => mockOAuth.resendVerification(testEmail),
+        ).thenThrow(Exception('network down'));
+
+        fakeAsync((fake) {
+          final cubit = buildCubit()
+            ..startPolling(
+              deviceCode: testDeviceCode,
+              verifier: testVerifier,
+              email: testEmail,
+            );
+
+          unawaited(cubit.resendVerification());
+          fake.elapse(const Duration(milliseconds: 100));
+
+          expect(cubit.state.resendStatus, ResendStatus.idle);
+          expect(cubit.state.resendCooldownSeconds, 0);
+
+          cubit.close();
+          fake.flushMicrotasks();
+        });
+      });
     });
 
     group('poll timeout keeps PIN entry available', () {
