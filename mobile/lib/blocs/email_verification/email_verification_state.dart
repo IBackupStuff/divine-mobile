@@ -3,6 +3,12 @@
 
 part of 'email_verification_cubit.dart';
 
+/// Sentinel for [EmailVerificationState.copyWith] so the nullable reason codes
+/// can distinguish "argument omitted" (preserve the current value) from
+/// "explicit null" (clear the value). Without it, the only way to express
+/// "leave it alone" collides with "set it to null".
+const Object _unset = Object();
+
 /// Status of email verification polling
 enum EmailVerificationStatus {
   /// Not polling
@@ -156,26 +162,36 @@ final class EmailVerificationState extends Equatable {
   /// Whether currently polling
   bool get isPolling => status == EmailVerificationStatus.polling;
 
+  /// Returns a copy with the given fields replaced.
+  ///
+  /// The nullable reason codes [errorCode] and [pinErrorCode] use a sentinel
+  /// default: omitting the argument preserves the current value, while passing
+  /// an explicit `null` clears it. Every other field follows the usual
+  /// `value ?? this.value` preserve-on-omit shape.
   EmailVerificationState copyWith({
     EmailVerificationStatus? status,
     String? pendingEmail,
-    EmailVerificationError? errorCode,
+    Object? errorCode = _unset,
     bool? showInviteGateRecovery,
     String? inviteRecoveryCode,
     PinSubmissionStatus? pinStatus,
-    EmailVerificationError? pinErrorCode,
+    Object? pinErrorCode = _unset,
     ResendStatus? resendStatus,
     int? resendCooldownSeconds,
   }) {
     return EmailVerificationState(
       status: status ?? this.status,
       pendingEmail: pendingEmail ?? this.pendingEmail,
-      errorCode: errorCode,
+      errorCode: identical(errorCode, _unset)
+          ? this.errorCode
+          : errorCode as EmailVerificationError?,
       showInviteGateRecovery:
           showInviteGateRecovery ?? this.showInviteGateRecovery,
       inviteRecoveryCode: inviteRecoveryCode ?? this.inviteRecoveryCode,
       pinStatus: pinStatus ?? this.pinStatus,
-      pinErrorCode: pinErrorCode ?? this.pinErrorCode,
+      pinErrorCode: identical(pinErrorCode, _unset)
+          ? this.pinErrorCode
+          : pinErrorCode as EmailVerificationError?,
       resendStatus: resendStatus ?? this.resendStatus,
       resendCooldownSeconds:
           resendCooldownSeconds ?? this.resendCooldownSeconds,

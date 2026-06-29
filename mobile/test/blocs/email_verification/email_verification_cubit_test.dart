@@ -1741,7 +1741,7 @@ void main() {
       expect(updated.errorCode, isNull);
     });
 
-    test('copyWith clears errorCode when not provided', () {
+    test('copyWith preserves errorCode when the argument is omitted', () {
       const original = EmailVerificationState(
         status: EmailVerificationStatus.failure,
         errorCode: EmailVerificationError.timeout,
@@ -1752,7 +1752,43 @@ void main() {
       );
 
       expect(updated.status, EmailVerificationStatus.polling);
+      expect(updated.errorCode, EmailVerificationError.timeout);
+    });
+
+    test('copyWith clears errorCode when passed explicit null', () {
+      const original = EmailVerificationState(
+        status: EmailVerificationStatus.failure,
+        errorCode: EmailVerificationError.timeout,
+      );
+
+      final updated = original.copyWith(errorCode: null);
+
       expect(updated.errorCode, isNull);
+    });
+
+    test('copyWith preserves pinErrorCode when an unrelated field changes', () {
+      const original = EmailVerificationState(
+        status: EmailVerificationStatus.pollingTimedOut,
+        pinStatus: PinSubmissionStatus.failure,
+        pinErrorCode: EmailVerificationError.pinInvalid,
+      );
+
+      final updated = original.copyWith(resendCooldownSeconds: 42);
+
+      expect(updated.resendCooldownSeconds, 42);
+      expect(updated.pinErrorCode, EmailVerificationError.pinInvalid);
+    });
+
+    test('copyWith clears pinErrorCode when passed explicit null', () {
+      const original = EmailVerificationState(
+        status: EmailVerificationStatus.pollingTimedOut,
+        pinStatus: PinSubmissionStatus.failure,
+        pinErrorCode: EmailVerificationError.pinInvalid,
+      );
+
+      final updated = original.copyWith(pinErrorCode: null);
+
+      expect(updated.pinErrorCode, isNull);
     });
 
     group('equality', () {
