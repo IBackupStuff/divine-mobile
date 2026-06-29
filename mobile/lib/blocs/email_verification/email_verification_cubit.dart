@@ -88,6 +88,22 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   String? _pendingVerificationToken;
   bool _isVerifyingEmailToken = false;
 
+  /// True once a terminal completion has been claimed for the current
+  /// verification. Set synchronously at the top of [_exchangeCodeAndLogin]
+  /// before the first await, so a racing poll completion and a racing PIN
+  /// submit cannot both reach token exchange / invite consumption. Reset
+  /// only by [startPolling] when a fresh verification begins.
+  bool _completionClaimed = false;
+
+  /// Whether a terminal completion has already been claimed for the current
+  /// verification — either by an in-flight/finished exchange on this instance
+  /// ([_completionClaimed]) or by another cubit instance that already
+  /// exchanged the same device code (the static [_completedDeviceCode]).
+  bool get _isCompletionClaimed =>
+      _completionClaimed ||
+      (_completedDeviceCode != null &&
+          _completedDeviceCode == _pendingDeviceCode);
+
   /// Client-side cooldown between resend requests, matching keycast's 5-minute
   /// server-side rate limit. The server always returns success (anti-
   /// enumeration), so the client owns surfacing the cooldown to the user.
@@ -168,6 +184,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
     _timeoutTimer?.cancel();
 
     _pollTickIndex = 0;
+    _completionClaimed = false;
     _schedulePoll();
 
     // Set timeout to stop polling after 15 minutes
@@ -451,6 +468,18 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   /// [PinSubmissionStatus.failure] with a [EmailVerificationError] code; the
   /// link/poll affordances stay intact.
   Future<void> submitPin(String pin) async {
+    if (_isCompletionClaimed) {
+      // A poll completion or an earlier PIN submit already claimed the
+      // exchange. Submitting again would burn a server-side PIN attempt (and
+      // could double-consume the invite) or overwrite the landed success.
+      Log.info(
+        'submitPin ignored — completion already claimed',
+        name: 'EmailVerificationCubit',
+        category: LogCategory.auth,
+      );
+      return;
+    }
+
     final deviceCode = _pendingDeviceCode;
     final verifier = _pendingVerifier;
     if (deviceCode == null || verifier == null) {
@@ -479,6 +508,11 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       );
 
       if (result.success && result.code != null) {
+        if (_isCompletionClaimed) {
+          // A poll completion won the race while verifyPin was in flight.
+          // Don't re-exchange or stop timers it already owns.
+          return;
+        }
         Log.info(
           'PIN verification succeeded, exchanging code',
           name: 'EmailVerificationCubit',
@@ -664,6 +698,18 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
             category: LogCategory.auth,
           );
           _pollTimer?.cancel();
+          if (_isCompletionClaimed) {
+            // A PIN submit (or an earlier completion) already claimed the
+            // exchange while this poll was in flight. Bail instead of emitting
+            // a missingAuthCode failure over the success it is landing.
+            Log.info(
+              'Completion already claimed, ignoring in-flight poll result '
+              '(cubit=$hashCode)',
+              name: 'EmailVerificationCubit',
+              category: LogCategory.auth,
+            );
+            return;
+          }
           if (result.code != null && _pendingVerifier != null) {
             await _exchangeCodeAndLogin(result.code!, _pendingVerifier!);
           } else {
@@ -762,6 +808,21 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   static const _consumeRetryDelay = Duration(milliseconds: 500);
 
   Future<void> _exchangeCodeAndLogin(String code, String verifier) async {
+    // Atomically claim completion before the first await. A racing poll
+    // completion or a second PIN submit that reaches here after the claim
+    // returns immediately, preventing a duplicate token exchange or a double
+    // invite consumption. Snapshot then null the pending device code / verifier
+    // under the claim so a resuming in-flight _poll() reads the cleared context
+    // and bails (see the PollStatus.complete guard) instead of landing a second
+    // exchange or emitting missingAuthCode over this success.
+    if (_isCompletionClaimed) {
+      return;
+    }
+    _completionClaimed = true;
+    final claimedDeviceCode = _pendingDeviceCode;
+    _pendingDeviceCode = null;
+    _pendingVerifier = null;
+
     for (var attempt = 1; attempt <= _maxExchangeRetries; attempt++) {
       try {
         Log.info(
@@ -786,7 +847,9 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
 
         // Mark this device code as completed so zombie cubits from engine
         // restarts (which hold different AuthService instances) will stop.
-        _completedDeviceCode = _pendingDeviceCode;
+        // Uses the snapshot taken at claim time because _pendingDeviceCode was
+        // nulled under the completion claim above.
+        _completedDeviceCode = claimedDeviceCode;
 
         // Emit success BEFORE signing in, because signInWithDivineOAuth
         // triggers an auth state change that causes GoRouter to redirect

@@ -1362,6 +1362,186 @@ void main() {
       });
     });
 
+    group('completion race (poll vs PIN submit)', () {
+      const pin = '123456';
+      const pinCode = 'pin-auth-code';
+      const pollCode = 'poll-auth-code';
+
+      // A PIN submit and a poll completion can land on the same cubit at once
+      // (user types the PIN while the link's poll is mid-flight). Only one may
+      // reach token exchange / invite consumption, and the in-flight poll must
+      // not overwrite the PIN-driven success with a missingAuthCode failure.
+      test(
+        'PIN submit wins; in-flight poll bails without a second exchange',
+        () {
+          when(() => mockAuthService.isRegistered).thenReturn(false);
+          when(() => mockAuthService.isAuthenticated).thenReturn(false);
+          when(() => mockAuthService.isAnonymous).thenReturn(false);
+          when(() => mockOAuth.config).thenReturn(
+            const OAuthConfig(
+              serverUrl: 'https://login.divine.video',
+              clientId: 'client-id',
+              redirectUri: 'divine://auth',
+            ),
+          );
+          // pollForCode resolves slowly so the poll is still in flight when
+          // the PIN submit claims completion.
+          when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
+            _,
+          ) async {
+            await Future<void>.delayed(const Duration(seconds: 5));
+            return PollResult.complete(pollCode);
+          });
+          when(
+            () => mockOAuth.verifyPin(deviceCode: testDeviceCode, pin: pin),
+          ).thenAnswer((_) async => VerifyPinResult.success(pinCode));
+          when(
+            () => mockOAuth.exchangeCode(
+              code: any(named: 'code'),
+              verifier: any(named: 'verifier'),
+            ),
+          ).thenAnswer(
+            (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
+          );
+          when(
+            () => mockInviteApiClient.consumeInviteWithSession(
+              code: any(named: 'code'),
+              oauthConfig: any(named: 'oauthConfig'),
+              session: any(named: 'session'),
+            ),
+          ).thenAnswer(
+            (_) async => const InviteConsumeResult(
+              message: 'Welcome',
+              codesAllocated: 5,
+            ),
+          );
+          when(
+            () => mockAuthService.signInWithDivineOAuth(any()),
+          ).thenAnswer((_) async {});
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+                inviteCode: 'ab12ef34',
+              );
+
+            // Fire the first poll tick; _poll() is now awaiting the slow
+            // pollForCode (in flight).
+            fake.elapse(const Duration(seconds: 3));
+
+            // User submits the PIN mid-flight. It claims completion and runs
+            // the exchange + consume to success.
+            unawaited(cubit.submitPin(pin));
+            fake.elapse(const Duration(seconds: 2));
+
+            expect(cubit.state.status, EmailVerificationStatus.success);
+
+            // Let the in-flight poll resolve. It must observe the claim and
+            // bail — no second exchange, no missingAuthCode over success.
+            fake.elapse(const Duration(seconds: 10));
+
+            expect(cubit.state.status, EmailVerificationStatus.success);
+            expect(cubit.state.errorCode, isNull);
+            verify(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+              ),
+            ).called(1);
+            verify(
+              () => mockInviteApiClient.consumeInviteWithSession(
+                code: any(named: 'code'),
+                oauthConfig: any(named: 'oauthConfig'),
+                session: any(named: 'session'),
+              ),
+            ).called(1);
+            verify(
+              () => mockAuthService.signInWithDivineOAuth(any()),
+            ).called(1);
+
+            cubit.close();
+            fake.flushMicrotasks();
+          });
+        },
+      );
+
+      test('a second PIN submit after one is claimed does not re-exchange', () {
+        when(() => mockAuthService.isRegistered).thenReturn(false);
+        when(() => mockAuthService.isAuthenticated).thenReturn(false);
+        when(() => mockAuthService.isAnonymous).thenReturn(false);
+        when(() => mockOAuth.config).thenReturn(
+          const OAuthConfig(
+            serverUrl: 'https://login.divine.video',
+            clientId: 'client-id',
+            redirectUri: 'divine://auth',
+          ),
+        );
+        when(
+          () => mockOAuth.pollForCode(testDeviceCode),
+        ).thenAnswer((_) async => PollResult.pending());
+        when(
+          () => mockOAuth.verifyPin(deviceCode: testDeviceCode, pin: pin),
+        ).thenAnswer((_) async => VerifyPinResult.success(pinCode));
+        when(
+          () => mockOAuth.exchangeCode(code: pinCode, verifier: testVerifier),
+        ).thenAnswer(
+          (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
+        );
+        when(
+          () => mockInviteApiClient.consumeInviteWithSession(
+            code: any(named: 'code'),
+            oauthConfig: any(named: 'oauthConfig'),
+            session: any(named: 'session'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const InviteConsumeResult(message: 'Welcome', codesAllocated: 5),
+        );
+        when(
+          () => mockAuthService.signInWithDivineOAuth(any()),
+        ).thenAnswer((_) async {});
+
+        fakeAsync((fake) {
+          final cubit = buildCubit()
+            ..startPolling(
+              deviceCode: testDeviceCode,
+              verifier: testVerifier,
+              email: testEmail,
+              inviteCode: 'ab12ef34',
+            );
+
+          unawaited(cubit.submitPin(pin));
+          fake.elapse(const Duration(seconds: 2));
+          expect(cubit.state.status, EmailVerificationStatus.success);
+
+          // Second submit after completion is already claimed must no-op.
+          unawaited(cubit.submitPin(pin));
+          fake.elapse(const Duration(seconds: 2));
+
+          expect(cubit.state.status, EmailVerificationStatus.success);
+          verify(
+            () => mockOAuth.verifyPin(deviceCode: testDeviceCode, pin: pin),
+          ).called(1);
+          verify(
+            () => mockOAuth.exchangeCode(code: pinCode, verifier: testVerifier),
+          ).called(1);
+          verify(
+            () => mockInviteApiClient.consumeInviteWithSession(
+              code: any(named: 'code'),
+              oauthConfig: any(named: 'oauthConfig'),
+              session: any(named: 'session'),
+            ),
+          ).called(1);
+
+          cubit.close();
+          fake.flushMicrotasks();
+        });
+      });
+    });
+
     group('resendVerification', () {
       test('sends, enters cooldown, then re-enables after 5 minutes', () {
         when(() => mockAuthService.isAuthenticated).thenReturn(false);
