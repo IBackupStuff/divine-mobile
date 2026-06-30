@@ -601,6 +601,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       VerifyPinError.invalid => EmailVerificationError.pinInvalid,
       VerifyPinError.expired => EmailVerificationError.pinExpired,
       VerifyPinError.locked => EmailVerificationError.pinLocked,
+      VerifyPinError.unavailable => EmailVerificationError.pinUnavailable,
       VerifyPinError.network ||
       VerifyPinError.server ||
       null => EmailVerificationError.pinFailed,

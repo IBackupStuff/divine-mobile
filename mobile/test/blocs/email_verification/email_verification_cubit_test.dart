@@ -1344,6 +1344,30 @@ void main() {
         });
       });
 
+      test('unavailable PIN endpoint surfaces pinUnavailable', () {
+        stubPinFailure(VerifyPinError.unavailable);
+
+        fakeAsync((fake) {
+          final cubit = buildCubit()
+            ..startPolling(
+              deviceCode: testDeviceCode,
+              verifier: testVerifier,
+              email: testEmail,
+            );
+
+          unawaited(cubit.submitPin(pin));
+          fake.elapse(const Duration(milliseconds: 100));
+
+          expect(
+            cubit.state.pinErrorCode,
+            EmailVerificationError.pinUnavailable,
+          );
+
+          cubit.close();
+          fake.flushMicrotasks();
+        });
+      });
+
       test('without pending context fails without calling the server', () {
         final cubit = buildCubit();
 

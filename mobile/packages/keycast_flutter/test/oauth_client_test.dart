@@ -878,6 +878,55 @@ void main() {
         expect(result.errorCode, VerifyPinError.locked);
       });
 
+      test('maps a 404 (endpoint absent) to an unavailable error', () async {
+        // A 404 means the verify-pin endpoint isn't deployed on this server.
+        // Surfaced as "use the email link / resend", not "incorrect PIN".
+        final mockClient = MockClient((request) async {
+          return http.Response('Not Found', 404);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.unavailable);
+      });
+
+      test('maps an unclassified 4xx to an unavailable error', () async {
+        // Anything that isn't the expected wrong-PIN response (400/401) and
+        // isn't locked/expired is treated as the PIN path being unavailable.
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'error': 'forbidden'}), 403);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '123456',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.unavailable);
+      });
+
+      test('maps a 401 to an invalid-PIN error', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'error': 'unauthorized'}), 401);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '000000',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.invalid);
+      });
+
       test('maps a 5xx response to a server error', () async {
         final mockClient = MockClient((request) async {
           return http.Response('Internal Server Error', 500);

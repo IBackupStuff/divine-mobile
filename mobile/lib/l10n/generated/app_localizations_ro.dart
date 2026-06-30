@@ -3333,6 +3333,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'We couldn\'t verify that code. Please try again.';
 
   @override
+  String get authVerificationErrorPinUnavailable =>
+      'Code entry isn\'t available right now. Tap the link in your email, or resend to get a fresh one.';
+
+  @override
   String get authInviteErrorAlreadyUsed =>
       'Acest cod de invitație nu mai e disponibil. Întoarce-te la codul tău, alătură-te listei de așteptare sau contactează asistența.';
 

@@ -3077,6 +3077,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'We couldn\'t verify that code. Please try again.';
 
   @override
+  String get authVerificationErrorPinUnavailable =>
+      'Code entry isn\'t available right now. Tap the link in your email, or resend to get a fresh one.';
+
+  @override
   String get authInviteErrorAlreadyUsed =>
       'その招待コードはもう使えないよ。招待コードに戻るか、ウェイトリストに参加するか、サポートに連絡してね。';
 

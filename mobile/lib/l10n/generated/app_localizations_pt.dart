@@ -3262,6 +3262,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'We couldn\'t verify that code. Please try again.';
 
   @override
+  String get authVerificationErrorPinUnavailable =>
+      'Code entry isn\'t available right now. Tap the link in your email, or resend to get a fresh one.';
+
+  @override
   String get authInviteErrorAlreadyUsed =>
       'Esse código de convite não está mais disponível. Volte para o seu código de convite, entre na lista de espera ou contate o suporte.';
 

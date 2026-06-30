@@ -47,6 +47,8 @@ extension EmailVerificationErrorL10n on AppLocalizations {
         return authVerificationErrorPinLocked;
       case EmailVerificationError.pinFailed:
         return authVerificationErrorPinFailed;
+      case EmailVerificationError.pinUnavailable:
+        return authVerificationErrorPinUnavailable;
     }
   }
 }

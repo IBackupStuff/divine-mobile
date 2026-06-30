@@ -159,6 +159,11 @@ enum VerifyPinError {
 
   /// Server returned a 5xx or otherwise unexpected/malformed response.
   server,
+
+  /// The verify-pin endpoint is absent (404) or returned an unclassified 4xx.
+  /// The PIN path isn't usable here; the UI should steer the user back to the
+  /// email link / resend rather than claiming the PIN was incorrect.
+  unavailable,
 }
 
 /// Result from POST /api/headless/verify-pin

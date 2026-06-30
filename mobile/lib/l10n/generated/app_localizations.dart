@@ -5658,6 +5658,12 @@ abstract class AppLocalizations {
   /// **'We couldn\'t verify that code. Please try again.'**
   String get authVerificationErrorPinFailed;
 
+  /// No description provided for @authVerificationErrorPinUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Code entry isn\'t available right now. Tap the link in your email, or resend to get a fresh one.'**
+  String get authVerificationErrorPinUnavailable;
+
   /// No description provided for @authInviteErrorAlreadyUsed.
   ///
   /// In en, this message translates to:

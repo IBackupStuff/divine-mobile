@@ -3233,6 +3233,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'We couldn\'t verify that code. Please try again.';
 
   @override
+  String get authVerificationErrorPinUnavailable =>
+      'Code entry isn\'t available right now. Tap the link in your email, or resend to get a fresh one.';
+
+  @override
   String get authInviteErrorAlreadyUsed =>
       'Den inbjudningskoden är inte längre tillgänglig. Gå tillbaka till din inbjudningskod, gå med i väntelistan eller kontakta supporten.';
 

@@ -110,6 +110,10 @@ enum EmailVerificationError {
 
   /// PIN verification failed for a network / server / unexpected reason.
   pinFailed,
+
+  /// The verify-pin endpoint is unavailable (absent / unclassified 4xx); the
+  /// user should fall back to the email link or request a fresh code.
+  pinUnavailable,
 }
 
 /// State for email verification polling

@@ -890,7 +890,6 @@ class KeycastOAuth {
         code.contains('pin')) {
       return VerifyPinError.invalid;
     }
-
     // Any other unclassified 4xx: the PIN path is unavailable here, so steer
     // the user to the email link / resend rather than claiming an incorrect PIN.
     return VerifyPinError.unavailable;
