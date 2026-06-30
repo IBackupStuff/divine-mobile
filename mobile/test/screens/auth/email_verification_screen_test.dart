@@ -605,6 +605,56 @@ void main() {
       );
 
       testWidgets(
+        'does not start polling when disposed during persistence load',
+        (tester) async {
+          final loadCompleter = Completer<PendingVerification?>();
+          when(
+            () => mockPendingVerification.load(),
+          ).thenAnswer((_) => loadCompleter.future);
+          when(
+            () => mockOAuth.verifyEmail(token: any(named: 'token')),
+          ).thenAnswer((_) async => VerifyEmailResult(success: true));
+          when(
+            () => mockCubit.startPolling(
+              deviceCode: any(named: 'deviceCode'),
+              verifier: any(named: 'verifier'),
+              email: any(named: 'email'),
+              inviteCode: any(named: 'inviteCode'),
+            ),
+          ).thenReturn(null);
+
+          await tester.pumpWidget(createTestWidget(token: 'persisted-token'));
+          await tester.pump();
+
+          // Unmount the screen while the persistence load is still in flight.
+          await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+          await tester.pump();
+
+          // Resolve the load after dispose — the mounted guard must stop the
+          // resumed async path from re-arming polling on a dead widget.
+          loadCompleter.complete(
+            PendingVerification(
+              deviceCode: 'persisted-device-code',
+              verifier: 'persisted-verifier',
+              email: 'user@example.com',
+              createdAt: DateTime(2026),
+            ),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 10));
+
+          verifyNever(
+            () => mockCubit.startPolling(
+              deviceCode: any(named: 'deviceCode'),
+              verifier: any(named: 'verifier'),
+              email: any(named: 'email'),
+              inviteCode: any(named: 'inviteCode'),
+            ),
+          );
+        },
+      );
+
+      testWidgets(
         're-verifies when token changes while already in token mode',
         (tester) async {
           final tokenNotifier = ValueNotifier<String>('token-1');

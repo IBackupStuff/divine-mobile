@@ -1902,6 +1902,102 @@ void main() {
           fake.flushMicrotasks();
         });
       });
+
+      test('timeout does not clobber an in-flight claimed completion', () {
+        when(() => mockAuthService.isAuthenticated).thenReturn(false);
+        when(() => mockAuthService.isRegistered).thenReturn(false);
+        when(() => mockAuthService.isAnonymous).thenReturn(false);
+        when(
+          () => mockOAuth.pollForCode(testDeviceCode),
+        ).thenAnswer((_) async => PollResult.complete('race-code'));
+        // Exchange hangs past the 15-minute timeout, so the completion is
+        // claimed (set synchronously in _exchangeCodeAndLogin) but unfinished
+        // when _onTimeout fires.
+        when(
+          () =>
+              mockOAuth.exchangeCode(code: 'race-code', verifier: testVerifier),
+        ).thenAnswer((_) async {
+          await Future<void>.delayed(const Duration(minutes: 20));
+          return const TokenResponse(bunkerUrl: 'wss://relay.test');
+        });
+        when(
+          () => mockAuthService.signInWithDivineOAuth(any()),
+        ).thenAnswer((_) async {});
+
+        fakeAsync((fake) {
+          final cubit = buildCubit()
+            ..startPolling(
+              deviceCode: testDeviceCode,
+              verifier: testVerifier,
+              email: testEmail,
+            );
+
+          // First poll at +3s returns complete and claims the exchange.
+          fake.elapse(const Duration(seconds: 4));
+
+          // The 15-minute timeout fires while the exchange is still in flight.
+          fake.elapse(const Duration(minutes: 15));
+          expect(
+            cubit.state.status,
+            isNot(EmailVerificationStatus.pollingTimedOut),
+            reason: 'a claimed completion must not be clobbered by the timeout',
+          );
+
+          // Let the exchange finish — success lands.
+          fake.elapse(const Duration(minutes: 6));
+          expect(cubit.state.status, EmailVerificationStatus.success);
+
+          cubit.close();
+          fake.flushMicrotasks();
+        });
+      });
+
+      test('timeout cancels an active resend cooldown timer', () {
+        when(() => mockAuthService.isAuthenticated).thenReturn(false);
+        when(() => mockAuthService.isRegistered).thenReturn(false);
+        when(
+          () => mockOAuth.pollForCode(testDeviceCode),
+        ).thenAnswer((_) async => PollResult.pending());
+        when(
+          () => mockOAuth.resendVerification(testEmail),
+        ).thenAnswer((_) async => ResendVerificationResult(success: true));
+
+        fakeAsync((fake) {
+          final cubit = buildCubit()
+            ..startPolling(
+              deviceCode: testDeviceCode,
+              verifier: testVerifier,
+              email: testEmail,
+            );
+
+          // Resend late (minute 12) so the 5-minute cooldown is still active
+          // when the 15-minute timeout fires.
+          fake.elapse(const Duration(minutes: 12));
+          unawaited(cubit.resendVerification());
+          fake.elapse(const Duration(milliseconds: 100));
+          expect(cubit.state.resendStatus, ResendStatus.cooldown);
+          expect(cubit.state.resendCooldownSeconds, 300);
+
+          // Timeout fires ~3 min into the cooldown.
+          fake.elapse(const Duration(minutes: 3));
+          expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
+          expect(cubit.state.resendStatus, ResendStatus.idle);
+          expect(cubit.state.resendCooldownSeconds, 0);
+
+          // An orphaned cooldown tick would revive resendCooldownSeconds onto
+          // the timed-out state here.
+          fake.elapse(const Duration(seconds: 3));
+          expect(cubit.state.resendStatus, ResendStatus.idle);
+          expect(
+            cubit.state.resendCooldownSeconds,
+            0,
+            reason: 'resend timer must be cancelled on timeout',
+          );
+
+          cubit.close();
+          fake.flushMicrotasks();
+        });
+      });
     });
   });
 

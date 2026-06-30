@@ -429,6 +429,9 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   }
 
   void _onTimeout() {
+    // A poll/PIN completion already landing (or finished) owns the terminal
+    // state — don't clobber its success with pollingTimedOut.
+    if (_isCompletionClaimed) return;
     Log.warning(
       'Email verification polling timed out after '
       '${_pollingTimeout.inMinutes} minutes — keeping PIN entry available',
@@ -440,6 +443,11 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
     // failure here would force a re-registration (and trip the duplicate-email
     // edge); instead the screen stays usable for PIN entry / resend.
     _stopPollTimers();
+    // Also tear down the resend cooldown timer so its periodic tick can't
+    // revive resendCooldownSeconds onto the fresh timed-out state emitted
+    // below (which resets resend fields to idle/0).
+    _resendTimer?.cancel();
+    _resendTimer = null;
     emit(
       EmailVerificationState(
         status: EmailVerificationStatus.pollingTimedOut,
