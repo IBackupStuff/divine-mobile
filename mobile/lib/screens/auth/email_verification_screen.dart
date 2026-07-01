@@ -129,6 +129,16 @@ class _EmailVerificationScreenState
         category: LogCategory.auth,
       );
       unawaited(_startPollingWithHydratedInvite());
+    } else if (widget.restored) {
+      // Cold-start restore: the URL deliberately carries no deviceCode /
+      // verifier (they are secrets), so rehydrate the full context from the
+      // persisted record.
+      Log.info(
+        'Restoring verification from persisted record (cubit=${_cubit.hashCode})',
+        name: 'EmailVerificationScreen',
+        category: LogCategory.auth,
+      );
+      unawaited(_restoreFromPersistedRecord());
     } else if (widget.isTokenMode) {
       // Token mode - check for persisted verification data for auto-login
       _isTokenMode = true;
@@ -142,15 +152,15 @@ class _EmailVerificationScreenState
     }
   }
 
-  /// Starts polling for the URL's device code / verifier, hydrating the invite
-  /// code from the persisted record (the single authoritative context).
+  /// Starts polling for the URL's device code / verifier (the fresh
+  /// post-registration path), hydrating the invite code from the persisted
+  /// record.
   ///
-  /// A cold-start restore navigates with deviceCode/verifier/email but the
-  /// restore URL cannot carry the invite, and the in-memory [InviteGateBloc]
-  /// grant is gone after a reopen. Reading the invite from the matching
-  /// persisted record — mirroring the token-mode path — keeps the invite so it
-  /// is consumed on completion. Falls back to the in-memory grant for the
-  /// fresh post-registration path when no matching record is present.
+  /// The registration URL carries deviceCode/verifier but not the invite, and
+  /// the in-memory [InviteGateBloc] grant may already be gone. Reading the
+  /// invite from the matching persisted record — mirroring the token-mode path
+  /// — keeps the invite so it is consumed on completion. Falls back to the
+  /// in-memory grant when no matching record is present.
   Future<void> _startPollingWithHydratedInvite() async {
     final pending = await ref.read(pendingVerificationServiceProvider).load();
     if (!mounted) return;
@@ -165,6 +175,29 @@ class _EmailVerificationScreenState
       verifier: widget.verifier!,
       email: widget.email ?? '',
       inviteCode: inviteCode,
+    );
+  }
+
+  /// Rehydrates the full verification context from the persisted record and
+  /// starts polling, for the cold-start restore path whose URL carries no
+  /// secrets (deviceCode / verifier). If no record survives, there is nothing
+  /// to restore — leave the screen so the user can use the escape hatch.
+  Future<void> _restoreFromPersistedRecord() async {
+    final pending = await ref.read(pendingVerificationServiceProvider).load();
+    if (!mounted) return;
+    if (pending == null) {
+      Log.warning(
+        'Cold-start restore found no pending record',
+        name: 'EmailVerificationScreen',
+        category: LogCategory.auth,
+      );
+      return;
+    }
+    _cubit.startPolling(
+      deviceCode: pending.deviceCode,
+      verifier: pending.verifier,
+      email: pending.email,
+      inviteCode: pending.inviteCode,
     );
   }
 

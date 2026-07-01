@@ -1078,6 +1078,49 @@ void main() {
           verify(() => mockPendingVerification.clear()).called(greaterThan(0));
         },
       );
+
+      testWidgets(
+        'restore rehydrates deviceCode/verifier from the record, not the URL',
+        (tester) async {
+          when(() => mockPendingVerification.load()).thenAnswer(
+            (_) async => PendingVerification(
+              deviceCode: 'record-device',
+              verifier: 'record-verifier',
+              email: 'user@example.com',
+              createdAt: DateTime(2026),
+              inviteCode: 'record-invite',
+            ),
+          );
+          when(
+            () => mockCubit.startPolling(
+              deviceCode: any(named: 'deviceCode'),
+              verifier: any(named: 'verifier'),
+              email: any(named: 'email'),
+              inviteCode: any(named: 'inviteCode'),
+            ),
+          ).thenReturn(null);
+
+          // The restore URL carries only email + restored=true; the secrets
+          // must come from the persisted record.
+          await pumpVerificationScreen(
+            tester,
+            email: 'user@example.com',
+            restored: true,
+            initialState: pollingState,
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 10));
+
+          verify(
+            () => mockCubit.startPolling(
+              deviceCode: 'record-device',
+              verifier: 'record-verifier',
+              email: 'user@example.com',
+              inviteCode: 'record-invite',
+            ),
+          ).called(1);
+        },
+      );
     });
   });
 }

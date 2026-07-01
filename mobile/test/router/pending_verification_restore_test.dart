@@ -32,16 +32,26 @@ void main() {
       expect(pendingEmailVerificationRestoreLocation(expired), isNull);
     });
 
-    test('builds a polling-mode verify-email URL with restored flag', () {
+    test('builds a restore URL with only email + restored flag', () {
       final location = pendingEmailVerificationRestoreLocation(_pending());
       expect(location, isNotNull);
 
       final uri = Uri.parse(location!);
       expect(uri.path, equals('/verify-email'));
-      expect(uri.queryParameters['deviceCode'], equals('device-123'));
-      expect(uri.queryParameters['verifier'], equals('verifier-abc'));
       expect(uri.queryParameters['email'], equals('user@example.com'));
       expect(uri.queryParameters['restored'], equals('true'));
+    });
+
+    test('does not put the deviceCode or verifier secrets in the URL', () {
+      final location = pendingEmailVerificationRestoreLocation(_pending());
+      // deviceCode/verifier are secrets and are rehydrated from the persisted
+      // record on the restore path, never carried on a URL that could be
+      // logged or leaked.
+      expect(location, isNot(contains('device-123')));
+      expect(location, isNot(contains('verifier-abc')));
+      final uri = Uri.parse(location!);
+      expect(uri.queryParameters.containsKey('deviceCode'), isFalse);
+      expect(uri.queryParameters.containsKey('verifier'), isFalse);
     });
 
     test('percent-encodes the email so the URL round-trips', () {

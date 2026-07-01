@@ -1926,7 +1926,8 @@ class _DivineAppState extends ConsumerState<DivineApp>
           final currentLocation = router.routeInformationProvider.value.uri
               .toString();
           Log.info(
-            '🔗 Current router location: $currentLocation',
+            '🔗 Current router location: '
+            '${redactUriStringForLogs(currentLocation)}',
             name: 'DeepLinkHandler',
             category: LogCategory.ui,
           );
