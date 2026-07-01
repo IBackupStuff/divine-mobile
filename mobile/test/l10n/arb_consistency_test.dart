@@ -142,9 +142,19 @@ void main() {
   });
 }
 
-// Every key in app_en.arb is currently translated in all 16 locales.
-// Add keys here only when a translation pass is intentionally deferred.
-const _knownUntranslatedDebt = <String>{};
+// Add keys here only when a translation pass is intentionally deferred;
+// otherwise every key in app_en.arb is translated in all 16 locales.
+const _knownUntranslatedDebt = <String>{
+  // Added by community content-warning tagging (#4771). Existing locales
+  // fall back to English until the next translation pass.
+  'contentWarningCommunitySource',
+  'communitySuggestTitle',
+  'communitySuggestSubtitle',
+  'communitySuggestSubmit',
+  'communitySuggestSuccess',
+  'communitySuggestFailure',
+  'communitySuggestAlready',
+};
 
 Map<String, Object?> _readArb(File file) {
   return (jsonDecode(file.readAsStringSync()) as Map).cast<String, Object?>();
