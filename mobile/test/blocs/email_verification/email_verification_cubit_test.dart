@@ -1262,6 +1262,71 @@ void main() {
         });
       });
 
+      test(
+        'abandons exchange when pending context is cleared during verifyPin',
+        () {
+          when(() => mockAuthService.isRegistered).thenReturn(false);
+          when(() => mockAuthService.isAuthenticated).thenReturn(false);
+          when(() => mockAuthService.isAnonymous).thenReturn(false);
+          when(
+            () => mockOAuth.pollForCode(testDeviceCode),
+          ).thenAnswer((_) async => PollResult.pending());
+          // verifyPin hangs so the escape hatch can clear the pending context
+          // before it resolves.
+          when(
+            () => mockOAuth.verifyPin(deviceCode: testDeviceCode, pin: pin),
+          ).thenAnswer((_) async {
+            await Future<void>.delayed(const Duration(seconds: 5));
+            return VerifyPinResult.success(pinCode);
+          });
+          when(
+            () => mockOAuth.exchangeCode(code: pinCode, verifier: testVerifier),
+          ).thenAnswer(
+            (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
+          );
+          when(
+            () => mockAuthService.signInWithDivineOAuth(any()),
+          ).thenAnswer((_) async {});
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+              );
+
+            unawaited(cubit.submitPin(pin));
+            fake.elapse(const Duration(milliseconds: 100));
+            expect(cubit.state.pinStatus, PinSubmissionStatus.submitting);
+
+            // The user leaves (escape hatch) while verifyPin is still in
+            // flight; stopPolling clears the pending context WITHOUT claiming
+            // completion.
+            cubit.stopPolling();
+
+            // verifyPin now resolves success — the abandoned submit must NOT
+            // exchange or sign in.
+            fake.elapse(const Duration(seconds: 6));
+
+            verifyNever(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+              ),
+            );
+            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+            expect(
+              cubit.state.status,
+              isNot(EmailVerificationStatus.success),
+            );
+
+            cubit.close();
+            fake.flushMicrotasks();
+          });
+        },
+      );
+
       void stubPinFailure(VerifyPinError error) {
         when(() => mockAuthService.isRegistered).thenReturn(false);
         when(() => mockAuthService.isAuthenticated).thenReturn(false);

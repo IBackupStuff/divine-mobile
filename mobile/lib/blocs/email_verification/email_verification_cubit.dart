@@ -559,6 +559,21 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
           // Don't re-exchange or stop timers it already owns.
           return;
         }
+        if (_pendingDeviceCode == null ||
+            _pendingDeviceCode != deviceCode ||
+            _pendingVerifier != verifier) {
+          // The pending context was cleared or replaced while verifyPin was in
+          // flight — e.g. the user hit the escape hatch (stopPolling/reset) or
+          // a fresh registration re-init. Those paths null the context without
+          // claiming completion, so _isCompletionClaimed stays false; abandon
+          // rather than sign the user into an abandoned/stale session.
+          Log.info(
+            'submitPin: pending context changed during verifyPin — abandoning',
+            name: 'EmailVerificationCubit',
+            category: LogCategory.auth,
+          );
+          return;
+        }
         Log.info(
           'PIN verification succeeded, exchanging code',
           name: 'EmailVerificationCubit',
