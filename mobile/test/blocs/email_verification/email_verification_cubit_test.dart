@@ -1976,6 +1976,103 @@ void main() {
         });
       });
 
+      test(
+        'in-flight recoverable poll error after timeout keeps PIN entry '
+        'available',
+        () {
+          when(() => mockAuthService.isAuthenticated).thenReturn(false);
+          when(() => mockAuthService.isRegistered).thenReturn(false);
+
+          // The poll hangs past the 15-minute timeout, then resolves with a
+          // non-transient but recoverable/unknown failure.
+          when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
+            _,
+          ) async {
+            await Future<void>.delayed(const Duration(seconds: 1000));
+            // No explicit failure -> defaults to the non-transient
+            // KeycastAuthFailure.unknown (a recoverable/unknown poll error).
+            return PollResult.error('server error');
+          });
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+              );
+
+            fake.elapse(const Duration(seconds: 4)); // poll in flight
+            fake.elapse(const Duration(minutes: 15)); // timeout fires
+            expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
+
+            // The in-flight poll resolves with a recoverable error after the
+            // window elapsed. It must NOT tear down the preserved PIN path.
+            fake.elapse(const Duration(minutes: 10));
+
+            expect(
+              cubit.state.status,
+              EmailVerificationStatus.pollingTimedOut,
+              reason:
+                  'a recoverable poll error after timeout must keep PIN entry '
+                  'usable, not drop to terminal failure',
+            );
+            expect(cubit.state.pendingEmail, testEmail);
+
+            cubit.close();
+            fake.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'in-flight expired poll error after timeout still terminates',
+        () {
+          when(() => mockAuthService.isAuthenticated).thenReturn(false);
+          when(() => mockAuthService.isRegistered).thenReturn(false);
+
+          when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
+            _,
+          ) async {
+            await Future<void>.delayed(const Duration(seconds: 1000));
+            return PollResult.error(
+              'expired',
+              failure: KeycastAuthFailure.expiredVerification,
+            );
+          });
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+              );
+
+            fake.elapse(const Duration(seconds: 4));
+            fake.elapse(const Duration(minutes: 15));
+            expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
+
+            fake.elapse(const Duration(minutes: 10));
+
+            expect(
+              cubit.state.status,
+              EmailVerificationStatus.failure,
+              reason:
+                  'a genuinely-expired device code must still terminate even '
+                  'after the poll window elapsed',
+            );
+            expect(
+              cubit.state.errorCode,
+              EmailVerificationError.verificationLinkExpired,
+            );
+
+            cubit.close();
+            fake.flushMicrotasks();
+          });
+        },
+      );
+
       test('timeout cancels an active resend cooldown timer', () {
         when(() => mockAuthService.isAuthenticated).thenReturn(false);
         when(() => mockAuthService.isRegistered).thenReturn(false);

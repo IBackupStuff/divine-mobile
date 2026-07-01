@@ -813,6 +813,39 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
             // Don't stop polling - it will retry in 3 seconds
           } else {
             final errorCode = _errorForPollFailure(result);
+
+            // A completion was already claimed (an in-flight/finished exchange
+            // on this instance, or another cubit finished this device code).
+            // A late poll error is stale and must not clobber that success.
+            if (_isCompletionClaimed) {
+              Log.warning(
+                'Ignoring post-completion poll error (cubit=$hashCode): '
+                '$errorMsg',
+                name: 'EmailVerificationCubit',
+                category: LogCategory.auth,
+              );
+              return;
+            }
+
+            // After the poll window elapsed, _onTimeout deliberately retains
+            // the pending device code / verifier so PIN entry still works. A
+            // recoverable/unknown poll error that lands late must not tear that
+            // down — only a genuinely expired / already-registered device code
+            // is truly terminal.
+            final isTerminalFailure =
+                errorCode == EmailVerificationError.emailAlreadyRegistered ||
+                errorCode == EmailVerificationError.verificationLinkExpired;
+            if (!isTerminalFailure &&
+                state.status == EmailVerificationStatus.pollingTimedOut) {
+              Log.warning(
+                'Recoverable poll error after timeout — keeping PIN entry '
+                'available: $errorMsg',
+                name: 'EmailVerificationCubit',
+                category: LogCategory.auth,
+              );
+              return;
+            }
+
             final pendingEmail = state.pendingEmail;
             Log.error(
               'Email verification polling error (stopping): '
