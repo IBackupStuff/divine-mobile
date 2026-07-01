@@ -1011,6 +1011,73 @@ void main() {
           verifyNever(() => mockPendingVerification.clear());
         },
       );
+
+      testWidgets(
+        'polling-mode restore hydrates inviteCode from the persisted record',
+        (tester) async {
+          // The restore URL carries deviceCode/verifier/email but cannot carry
+          // the invite; on a cold start the in-memory grant is gone, so the
+          // invite must come from the persisted record.
+          when(() => mockPendingVerification.load()).thenAnswer(
+            (_) async => PendingVerification(
+              deviceCode: 'test-device-code',
+              verifier: 'test-verifier',
+              email: 'user@example.com',
+              createdAt: DateTime(2026),
+              inviteCode: 'INV-CODE',
+            ),
+          );
+          when(
+            () => mockCubit.startPolling(
+              deviceCode: any(named: 'deviceCode'),
+              verifier: any(named: 'verifier'),
+              email: any(named: 'email'),
+              inviteCode: any(named: 'inviteCode'),
+            ),
+          ).thenReturn(null);
+
+          await pumpVerificationScreen(
+            tester,
+            deviceCode: 'test-device-code',
+            verifier: 'test-verifier',
+            email: 'user@example.com',
+            restored: true,
+            initialState: pollingState,
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 10));
+
+          verify(
+            () => mockCubit.startPolling(
+              deviceCode: 'test-device-code',
+              verifier: 'test-verifier',
+              email: 'user@example.com',
+              inviteCode: 'INV-CODE',
+            ),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
+        'Start Over from a terminal failure clears the pending record',
+        (tester) async {
+          await pumpVerificationScreen(
+            tester,
+            deviceCode: 'test-device-code',
+            verifier: 'test-verifier',
+            initialState: const EmailVerificationState(
+              status: EmailVerificationStatus.failure,
+              errorCode: EmailVerificationError.pollFailed,
+            ),
+          );
+          await tester.pump();
+
+          await tester.tap(find.widgetWithText(DivineButton, 'Start over'));
+          await tester.pumpAndSettle();
+
+          verify(() => mockPendingVerification.clear()).called(greaterThan(0));
+        },
+      );
     });
   });
 }

@@ -128,12 +128,7 @@ class _EmailVerificationScreenState
         name: 'EmailVerificationScreen',
         category: LogCategory.auth,
       );
-      _cubit.startPolling(
-        deviceCode: widget.deviceCode!,
-        verifier: widget.verifier!,
-        email: widget.email ?? '',
-        inviteCode: context.read<InviteGateBloc>().state.accessGrant?.code,
-      );
+      unawaited(_startPollingWithHydratedInvite());
     } else if (widget.isTokenMode) {
       // Token mode - check for persisted verification data for auto-login
       _isTokenMode = true;
@@ -145,6 +140,32 @@ class _EmailVerificationScreenState
         category: LogCategory.auth,
       );
     }
+  }
+
+  /// Starts polling for the URL's device code / verifier, hydrating the invite
+  /// code from the persisted record (the single authoritative context).
+  ///
+  /// A cold-start restore navigates with deviceCode/verifier/email but the
+  /// restore URL cannot carry the invite, and the in-memory [InviteGateBloc]
+  /// grant is gone after a reopen. Reading the invite from the matching
+  /// persisted record — mirroring the token-mode path — keeps the invite so it
+  /// is consumed on completion. Falls back to the in-memory grant for the
+  /// fresh post-registration path when no matching record is present.
+  Future<void> _startPollingWithHydratedInvite() async {
+    final pending = await ref.read(pendingVerificationServiceProvider).load();
+    if (!mounted) return;
+    final recordInvite =
+        (pending != null && pending.deviceCode == widget.deviceCode)
+        ? pending.inviteCode
+        : null;
+    final inviteCode =
+        recordInvite ?? context.read<InviteGateBloc>().state.accessGrant?.code;
+    _cubit.startPolling(
+      deviceCode: widget.deviceCode!,
+      verifier: widget.verifier!,
+      email: widget.email ?? '',
+      inviteCode: inviteCode,
+    );
   }
 
   /// Initialize token mode, checking for persisted data for auto-login.
@@ -342,7 +363,10 @@ class _EmailVerificationScreenState
   }
 
   void _handleStartOver() {
-    _maybeClearRestoredRecord();
+    // Start Over is a terminal exit: verification failed and the persisted
+    // record is unusable, so clear it unconditionally (not just in restored
+    // mode) so a later cold start doesn't restore the user into a dead flow.
+    ref.read(pendingVerificationServiceProvider).clear();
     context.go('/');
   }
 
