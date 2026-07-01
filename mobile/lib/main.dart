@@ -70,6 +70,7 @@ import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -80,6 +81,7 @@ import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/back_button_handler.dart';
 import 'package:openvine/services/bandwidth_tracker_service.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
@@ -1425,11 +1427,66 @@ Future<void> _initializeCoreServices(ProviderContainer container) async {
     category: LogCategory.system,
   );
 
+  // Re-initialize NostrKeyManager after AuthService, because AuthService may
+  // have imported/restored keys into PlatformSecureStorage during its own
+  // initialization (e.g. nsec import, key generation, session restore).
+  // NostrKeyManager ran first and found no keys; re-running picks them up.
+  final keyManager = container.read(nostrKeyManagerProvider);
+  if (!keyManager.hasKeys) {
+    await keyManager.initialize();
+    Log.info(
+      '[INIT] NostrKeyManager re-initialized after auth — '
+      'hasKeys=${keyManager.hasKeys}',
+      name: 'Main',
+      category: LogCategory.system,
+    );
+  }
+
+  await _maybeRestorePendingEmailVerification(container);
+
   Log.info(
     '[INIT] ✅ Core services initialized',
     name: 'Main',
     category: LogCategory.system,
   );
+}
+
+/// Restore the email-verification screen on a plain cold reopen (no deep link).
+///
+/// Registration persists the deviceCode/verifier/email (24h TTL) but nothing
+/// consults it on a normal startup, so a user who killed the app to read the
+/// 6-digit PIN from their email would otherwise land on Welcome. When the user
+/// is unauthenticated and an unexpired pending record exists, route them back
+/// to the polling-mode verification screen (PIN field visible) so they can
+/// finish. Verification deep links (token mode) are handled by
+/// [EmailVerificationListener]; this only fires from the Welcome landing and
+/// never overrides a screen a deep link already opened.
+Future<void> _maybeRestorePendingEmailVerification(
+  ProviderContainer container,
+) async {
+  final authService = container.read(authServiceProvider);
+  if (authService.authState != AuthState.unauthenticated) return;
+
+  final pending = await container
+      .read(pendingVerificationServiceProvider)
+      .load();
+  final target = pendingEmailVerificationRestoreLocation(pending);
+  if (target == null) return;
+
+  final router = container.read(goRouterProvider);
+  final currentPath = router.routerDelegate.currentConfiguration.uri.path;
+  // A verification deep link (token mode) already routed here — leave it.
+  if (currentPath == EmailVerificationScreen.path) return;
+  // Only restore from the cold-start landing; never yank a user who has
+  // already navigated elsewhere.
+  if (currentPath != WelcomeScreen.path) return;
+
+  Log.info(
+    'Restoring pending email verification on cold start',
+    name: 'Main',
+    category: LogCategory.auth,
+  );
+  router.go(target);
 }
 
 Future<void> _configurePlaybackAudioSession() async {

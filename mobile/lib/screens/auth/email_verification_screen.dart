@@ -41,6 +41,7 @@ class EmailVerificationScreen extends ConsumerStatefulWidget {
     this.deviceCode,
     this.verifier,
     this.email,
+    this.restored = false,
   });
 
   /// Token from deep link (token mode)
@@ -54,6 +55,13 @@ class EmailVerificationScreen extends ConsumerStatefulWidget {
 
   /// User's email address (polling mode)
   final String? email;
+
+  /// Whether the screen was restored on a cold start from the persisted
+  /// pending-verification record (see `pendingEmailVerificationRestoreLocation`
+  /// in the router). When true, the close / "Start over" affordance is treated
+  /// as an escape hatch: it clears the persisted record so the user can
+  /// register or log in as a different user without being restored back here.
+  final bool restored;
 
   /// Check if this is polling mode
   bool get isPollingMode =>
@@ -319,9 +327,12 @@ class _EmailVerificationScreenState
 
   void _handleCancel() {
     _cubit.stopPolling();
-    // Don't clear pending verification data - user may still verify via email
-    // link or PIN later. Data will be cleared on: successful login, logout, or
-    // expiration (24h verify window).
+    // On a normal post-registration cancel, don't clear pending verification
+    // data — the user may still verify via the email link or PIN later. Data is
+    // cleared on successful login, logout, or expiration (24h verify window).
+    // On a cold-start restore, closing is the escape hatch ("register / log in
+    // as a different user"), so clear the record to avoid restoring back here.
+    _maybeClearRestoredRecord();
     // Go back to previous screen (registration form)
     if (context.canPop()) {
       context.pop();
@@ -331,6 +342,7 @@ class _EmailVerificationScreenState
   }
 
   void _handleStartOver() {
+    _maybeClearRestoredRecord();
     context.go('/');
   }
 
@@ -344,6 +356,13 @@ class _EmailVerificationScreenState
         error: context.l10n.emailVerificationErrorMessage(errorCode),
       ),
     );
+  }
+
+  /// Clears the persisted pending-verification record when this screen was
+  /// restored on a cold start, so leaving it doesn't trap the user back here.
+  void _maybeClearRestoredRecord() {
+    if (!widget.restored) return;
+    ref.read(pendingVerificationServiceProvider).clear();
   }
 
   void _handleInviteRecovery(

@@ -46,7 +46,10 @@ import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 export 'routes/router_guards.dart'
-    show homeInitialIndexFromPathParameters, rewriteResetPasswordDeepLink;
+    show
+        homeInitialIndexFromPathParameters,
+        pendingEmailVerificationRestoreLocation,
+        rewriteResetPasswordDeepLink;
 
 part 'app_router_redirect.dart';
 
