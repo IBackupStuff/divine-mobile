@@ -1427,21 +1427,6 @@ Future<void> _initializeCoreServices(ProviderContainer container) async {
     category: LogCategory.system,
   );
 
-  // Re-initialize NostrKeyManager after AuthService, because AuthService may
-  // have imported/restored keys into PlatformSecureStorage during its own
-  // initialization (e.g. nsec import, key generation, session restore).
-  // NostrKeyManager ran first and found no keys; re-running picks them up.
-  final keyManager = container.read(nostrKeyManagerProvider);
-  if (!keyManager.hasKeys) {
-    await keyManager.initialize();
-    Log.info(
-      '[INIT] NostrKeyManager re-initialized after auth — '
-      'hasKeys=${keyManager.hasKeys}',
-      name: 'Main',
-      category: LogCategory.system,
-    );
-  }
-
   await _maybeRestorePendingEmailVerification(container);
 
   Log.info(
