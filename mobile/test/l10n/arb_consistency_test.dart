@@ -142,9 +142,22 @@ void main() {
   });
 }
 
-// Every key in app_en.arb is currently translated in all 16 locales.
-// Add keys here only when a translation pass is intentionally deferred.
-const _knownUntranslatedDebt = <String>{};
+const _knownUntranslatedDebt = {
+  // Added by the in-app email-verification PIN fallback (#5578). The English
+  // source ships now; the non-English locales fall back to English until the
+  // next translation pass picks these up.
+  'authVerificationPinPrompt',
+  'authVerificationPinFieldLabel',
+  'authVerificationPinSubmit',
+  'authVerificationResendPrompt',
+  'authVerificationResend',
+  'authVerificationResendCooldown',
+  'authVerificationErrorPinInvalid',
+  'authVerificationErrorPinExpired',
+  'authVerificationErrorPinLocked',
+  'authVerificationErrorPinFailed',
+  'authVerificationErrorPinUnavailable',
+};
 
 Map<String, Object?> _readArb(File file) {
   return (jsonDecode(file.readAsStringSync()) as Map).cast<String, Object?>();
