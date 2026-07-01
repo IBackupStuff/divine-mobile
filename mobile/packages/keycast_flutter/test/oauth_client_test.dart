@@ -971,6 +971,63 @@ void main() {
         expect(result.success, isFalse);
         expect(result.errorCode, VerifyPinError.network);
       });
+
+      test(
+        'honors json[code] for the failure identifier (no error field)',
+        () async {
+          // keycast may return the error identifier under `code` (same as the
+          // 2xx success path and register/login helpers). A 400 whose status
+          // alone would read as wrong-PIN must still map to expired via the code.
+          final mockClient = MockClient((request) async {
+            return http.Response(jsonEncode({'code': 'pin_expired'}), 400);
+          });
+
+          final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+          final result = await oauth.verifyPin(
+            deviceCode: 'device123',
+            pin: '123456',
+          );
+
+          expect(result.success, isFalse);
+          expect(result.errorCode, VerifyPinError.expired);
+        },
+      );
+
+      test(
+        'maps a generic invalid_request 400 to unavailable, not invalid',
+        () async {
+          // A generic OAuth/request error is NOT a wrong-PIN signal; treat it as
+          // the PIN path being unavailable so the user is steered to the link /
+          // resend instead of being told their PIN was wrong.
+          final mockClient = MockClient((request) async {
+            return http.Response(jsonEncode({'error': 'invalid_request'}), 400);
+          });
+
+          final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+          final result = await oauth.verifyPin(
+            deviceCode: 'device123',
+            pin: '123456',
+          );
+
+          expect(result.success, isFalse);
+          expect(result.errorCode, VerifyPinError.unavailable);
+        },
+      );
+
+      test('maps a genuine wrong-PIN 400 to an invalid-PIN error', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'error': 'invalid_pin'}), 400);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.verifyPin(
+          deviceCode: 'device123',
+          pin: '000000',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, VerifyPinError.invalid);
+      });
     });
 
     group('resendVerification', () {
