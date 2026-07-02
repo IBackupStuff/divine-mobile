@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -46,6 +48,16 @@ class _VideoRecorderLibraryButtonState
   Widget build(BuildContext context) {
     final clips = ref.watch(clipManagerProvider.select((p) => p.clips));
 
+    // Stop-motion captures accumulate frames in the recorder bloc (not the
+    // clip manager) until assembled, so mirror the latest still and the
+    // captured-frame count directly for a live preview during capture.
+    final (capturesStills, stopMotionFrames) = context.select(
+      (VideoRecorderBloc b) => (
+        b.state.recorderMode.capturesStills,
+        b.state.stopMotionFrames,
+      ),
+    );
+
     // Re-query library thumbnail whenever session clips change to empty
     // (e.g. user reset or deleted clips).
     // Reload library thumbnail whenever a clip is removed, since
@@ -64,15 +76,27 @@ class _VideoRecorderLibraryButtonState
       _lastKnownThumbnailPath = null;
     }
 
-    final thumbnailPath = _lastKnownThumbnailPath ?? _libraryThumbnailPath;
-    final hasClips = clips.isNotEmpty || _libraryThumbnailPath != null;
+    final String? thumbnailPath;
+    final int count;
+    final bool hasClips;
+    if (capturesStills) {
+      // Newest still first, falling back to a prior library clip so the button
+      // still opens the library before the first frame is shot.
+      thumbnailPath = stopMotionFrames.lastOrNull ?? _libraryThumbnailPath;
+      count = stopMotionFrames.length;
+      hasClips = stopMotionFrames.isNotEmpty || _libraryThumbnailPath != null;
+    } else {
+      thumbnailPath = _lastKnownThumbnailPath ?? _libraryThumbnailPath;
+      count = clips.length;
+      hasClips = clips.isNotEmpty || _libraryThumbnailPath != null;
+    }
 
     return Padding(
       padding: const .only(left: 16),
       child: Semantics(
         button: true,
         label: hasClips
-            ? context.l10n.videoRecorderLibraryOpenLabel(clips.length)
+            ? context.l10n.videoRecorderLibraryOpenLabel(count)
             : context.l10n.videoRecorderLibraryEmptyLabel,
         enabled: hasClips,
         child: InkWell(
@@ -115,11 +139,16 @@ class _VideoRecorderLibraryButtonState
                             File(thumbnailPath),
                             key: ValueKey(thumbnailPath),
                             fit: BoxFit.cover,
+                            // Stop-motion stills are full-resolution photos;
+                            // bound the decode to the 40px button.
+                            cacheHeight:
+                                (40 * MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
                           )
                         : const SizedBox.shrink(),
                   ),
                 ),
-                _SelectionCountBadge(count: clips.length),
+                _SelectionCountBadge(count: count),
               ],
             ),
           ),

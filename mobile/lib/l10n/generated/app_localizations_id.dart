@@ -8096,6 +8096,43 @@ class AppLocalizationsId extends AppLocalizations {
       'Hapus item yang dipilih';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => 'Bingkai per gambar';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bingkai',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'Bingkai';
+
+  @override
+  String get libraryStopMotionClipLabel => 'Klip stop-motion';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '$count bingkai per gambar';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'Tambah bingkai per gambar';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'Kurangi bingkai per gambar';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'Bingkai stop-motion $position dari $total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'Edit';
 
   @override

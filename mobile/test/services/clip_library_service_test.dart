@@ -7,8 +7,12 @@ import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as models show AspectRatio;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/services/clip_library_service.dart';
+import 'package:openvine/services/draft_storage_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 void main() {
@@ -51,6 +55,86 @@ void main() {
           endsWith('test_video.mp4'),
         );
       });
+
+      test(
+        'saves a frames-only stop-motion clip and reloads its frames',
+        () async {
+          final clip = DivineVideoClip(
+            id: 'sm_clip',
+            stopMotionFrames: const [
+              StopMotionClipFrame(
+                path: '/tmp/frame0.jpg',
+                duration: Duration(milliseconds: 167),
+              ),
+              StopMotionClipFrame(
+                path: '/tmp/frame1.jpg',
+                duration: Duration(milliseconds: 167),
+              ),
+            ],
+            thumbnailPath: '/tmp/frame0.jpg',
+            duration: const Duration(milliseconds: 334),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+
+          await service.saveClip(clip);
+          final clips = await service.getAllClips();
+
+          expect(clips, hasLength(1));
+          expect(clips.first.id, 'sm_clip');
+          expect(clips.first.isStopMotion, isTrue);
+          expect(clips.first.stopMotionFrames, hasLength(2));
+          expect(clips.first.video, isNull);
+        },
+      );
+
+      DivineVideoClip stopMotionClip() => DivineVideoClip(
+        id: 'sm_clip',
+        stopMotionFrames: const [
+          StopMotionClipFrame(
+            path: '/tmp/frame0.jpg',
+            duration: Duration(milliseconds: 167),
+          ),
+        ],
+        thumbnailPath: '/tmp/frame0.jpg',
+        duration: const Duration(milliseconds: 167),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      test(
+        'stays in the library exactly once through the editor autosave flow',
+        () async {
+          final draftService = DraftStorageService(
+            draftsDao: database.draftsDao,
+            clipsDao: database.clipsDao,
+          );
+          final clip = stopMotionClip();
+
+          // 1. Recorder saves the clip to the library.
+          await service.saveClip(clip);
+          expect(await service.getAllClips(), hasLength(1));
+
+          // 2. Editor autosave persists the clip into the autosave draft
+          // (exactly what happens after navigating from the recorder).
+          await draftService.saveDraft(
+            DivineVideoDraft.create(
+              id: VideoEditorConstants.autoSaveId,
+              clips: [clip],
+              title: '',
+              description: '',
+              hashtags: const {},
+              selectedApproach: '',
+            ),
+          );
+
+          // 3. It must still be visible in the library.
+          final clips = await service.getAllClips();
+          expect(clips.map((c) => c.id), equals(['sm_clip']));
+        },
+      );
 
       test('updates existing clip with same ID', () async {
         final clip1 = DivineVideoClip(
@@ -206,6 +290,32 @@ void main() {
         await service.hardDelete('nonexistent_clip');
 
         expect((await service.getAllClips()).length, 1);
+      });
+    });
+
+    group('deleteClipRow', () {
+      test('removes the library row for the given id', () async {
+        final clip = DivineVideoClip(
+          id: 'sm_session',
+          stopMotionFrames: const [
+            StopMotionClipFrame(
+              path: '/tmp/frame0.jpg',
+              duration: Duration(milliseconds: 83),
+            ),
+          ],
+          duration: const Duration(milliseconds: 83),
+          recordedAt: DateTime.now(),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+
+        await service.saveClip(clip);
+        expect((await service.getAllClips()).length, 1);
+
+        await service.deleteClipRow('sm_session');
+
+        expect(await service.getAllClips(), isEmpty);
+        expect(await service.getTrashedClips(), isEmpty);
       });
     });
 

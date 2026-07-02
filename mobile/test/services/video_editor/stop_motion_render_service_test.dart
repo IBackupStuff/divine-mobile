@@ -7,12 +7,20 @@ import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 void main() {
+  List<StopMotionClipFrame> framesOf(
+    List<String> paths, {
+    Duration duration = const Duration(milliseconds: 83),
+  }) => [
+    for (final path in paths)
+      StopMotionClipFrame(path: path, duration: duration),
+  ];
+
   group(StopMotionRenderService, () {
     tearDown(() => StopMotionRenderService.assembleOverride = null);
 
     test('returns null for an empty frame list', () async {
       final result = await StopMotionRenderService.assemble(
-        framePaths: const [],
+        frames: const [],
         aspectRatio: model.AspectRatio.vertical,
       );
 
@@ -20,85 +28,109 @@ void main() {
     });
 
     test('delegates to assembleOverride with the given arguments', () async {
-      List<String>? capturedPaths;
+      List<StopMotionClipFrame>? capturedFrames;
       model.AspectRatio? capturedRatio;
-      int? capturedFramesPerShot;
       double? capturedFrameRate;
 
       StopMotionRenderService.assembleOverride =
           ({
-            required framePaths,
+            required frames,
             required aspectRatio,
-            framesPerShot = 1,
             frameRate = StopMotionRenderService.defaultFrameRate,
           }) async {
-            capturedPaths = framePaths;
+            capturedFrames = frames;
             capturedRatio = aspectRatio;
-            capturedFramesPerShot = framesPerShot;
             capturedFrameRate = frameRate;
             return '/tmp/out.mp4';
           };
 
+      final frames = framesOf(const ['/a.jpg', '/b.jpg']);
       final result = await StopMotionRenderService.assemble(
-        framePaths: const ['/a.jpg', '/b.jpg'],
+        frames: frames,
         aspectRatio: model.AspectRatio.square,
-        framesPerShot: 3,
       );
 
       expect(result, '/tmp/out.mp4');
-      expect(capturedPaths, ['/a.jpg', '/b.jpg']);
+      expect(capturedFrames, frames);
       expect(capturedRatio, model.AspectRatio.square);
-      expect(capturedFramesPerShot, 3);
       expect(capturedFrameRate, StopMotionRenderService.defaultFrameRate);
     });
 
     group('framesForMinOutputDuration', () {
       const min = VideoEditorConstants.stopMotionMinOutputDuration;
 
+      Duration total(List<StopMotionClipFrame> frames) =>
+          frames.fold(Duration.zero, (sum, frame) => sum + frame.duration);
+
       test('returns an empty list unchanged', () {
         expect(
-          StopMotionRenderService.framesForMinOutputDuration(
-            const [],
-            const Duration(milliseconds: 83),
-          ),
+          StopMotionRenderService.framesForMinOutputDuration(const []),
           isEmpty,
         );
       });
 
       test('repeats a single still until it reaches the minimum', () {
-        const perFrame = Duration(milliseconds: 83);
+        final frames = framesOf(const ['/a.jpg']);
         final result = StopMotionRenderService.framesForMinOutputDuration(
-          const ['/a.jpg'],
-          perFrame,
+          frames,
         );
 
-        expect(result.toSet(), {'/a.jpg'});
-        expect(perFrame * result.length, greaterThanOrEqualTo(min));
+        expect(result.map((f) => f.path).toSet(), {'/a.jpg'});
+        expect(total(result), greaterThanOrEqualTo(min));
         // Minimal: one fewer copy would fall short of the floor.
-        expect(perFrame * (result.length - 1), lessThan(min));
+        expect(
+          total(result.sublist(0, result.length - 1)),
+          lessThan(min),
+        );
       });
 
       test('loops a short sequence a whole number of times', () {
-        const perFrame = Duration(milliseconds: 100);
-        const frames = ['/a.jpg', '/b.jpg', '/c.jpg']; // 300ms < 1s
+        final frames = framesOf(
+          const ['/a.jpg', '/b.jpg', '/c.jpg'],
+          duration: const Duration(milliseconds: 100),
+        ); // 300ms < 1s
         final result = StopMotionRenderService.framesForMinOutputDuration(
           frames,
-          perFrame,
         );
 
         expect(result.length % frames.length, 0);
-        expect(perFrame * result.length, greaterThanOrEqualTo(min));
-        expect(perFrame * (result.length - frames.length), lessThan(min));
+        expect(total(result), greaterThanOrEqualTo(min));
+        expect(
+          total(result.sublist(0, result.length - frames.length)),
+          lessThan(min),
+        );
         // Order preserved across the repeats (seamless loop).
         expect(result.sublist(0, frames.length), frames);
       });
 
-      test('leaves a sequence already at the minimum unchanged', () {
-        const perFrame = Duration(milliseconds: 250);
-        const frames = ['/a.jpg', '/b.jpg', '/c.jpg', '/d.jpg']; // 1s
+      test('preserves per-frame holds when looping', () {
+        final frames = [
+          const StopMotionClipFrame(
+            path: '/a.jpg',
+            duration: Duration(milliseconds: 83),
+          ),
+          const StopMotionClipFrame(
+            path: '/b.jpg',
+            duration: Duration(milliseconds: 250),
+          ),
+        ];
         final result = StopMotionRenderService.framesForMinOutputDuration(
           frames,
-          perFrame,
+        );
+
+        for (var i = 0; i < result.length; i += 2) {
+          expect(result[i].duration, const Duration(milliseconds: 83));
+          expect(result[i + 1].duration, const Duration(milliseconds: 250));
+        }
+      });
+
+      test('leaves a sequence already at the minimum unchanged', () {
+        final frames = framesOf(
+          const ['/a.jpg', '/b.jpg', '/c.jpg', '/d.jpg'],
+          duration: const Duration(milliseconds: 250),
+        ); // 1s
+        final result = StopMotionRenderService.framesForMinOutputDuration(
+          frames,
         );
 
         expect(result, frames);
@@ -115,10 +147,10 @@ void main() {
           ),
           StopMotionClipFrame(
             path: '/b.jpg',
-            duration: Duration(milliseconds: 83),
+            duration: Duration(milliseconds: 250),
           ),
         ],
-        duration: const Duration(milliseconds: 166),
+        duration: const Duration(milliseconds: 333),
         recordedAt: DateTime(2024),
         targetAspectRatio: model.AspectRatio.vertical,
         originalAspectRatio: 9 / 16,
@@ -139,23 +171,23 @@ void main() {
         expect(identical(result, clip), isTrue);
       });
 
-      test('renders a stop-motion clip to a video-backed copy', () async {
-        List<String>? capturedPaths;
+      test('renders the clip frames — per-frame holds included', () async {
+        List<StopMotionClipFrame>? capturedFrames;
         StopMotionRenderService.assembleOverride =
             ({
-              required framePaths,
+              required frames,
               required aspectRatio,
-              framesPerShot = 1,
               frameRate = StopMotionRenderService.defaultFrameRate,
             }) async {
-              capturedPaths = framePaths;
+              capturedFrames = frames;
               return '/rendered.mp4';
             };
 
         final clip = stopMotionClip();
         final result = await StopMotionRenderService.materialize(clip);
 
-        expect(capturedPaths, ['/a.jpg', '/b.jpg']);
+        // The clip's own frames (with individual hold times) reach the render.
+        expect(capturedFrames, clip.stopMotionFrames);
         expect(result?.video?.file?.path, '/rendered.mp4');
         // Frames are kept as the source of truth.
         expect(result?.stopMotionFrames, clip.stopMotionFrames);
@@ -164,9 +196,8 @@ void main() {
       test('returns null when the render fails', () async {
         StopMotionRenderService.assembleOverride =
             ({
-              required framePaths,
+              required frames,
               required aspectRatio,
-              framesPerShot = 1,
               frameRate = StopMotionRenderService.defaultFrameRate,
             }) async => null;
 

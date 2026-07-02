@@ -276,6 +276,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     required double originalAspectRatio,
     required model.AspectRatio targetAspectRatio,
     required Duration duration,
+    String? id,
     String? thumbnailPath,
     CameraLensMetadata? lensMetadata,
   }) {
@@ -286,7 +287,12 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     }
 
     final clip = DivineVideoClip(
-      id: 'clip_${DateTime.now().millisecondsSinceEpoch}_${_clipCounter++}',
+      // Reuse the session id when the frames were already persisted to the
+      // library during capture, so assembling updates that row instead of
+      // creating a second one.
+      id:
+          id ??
+          'clip_${DateTime.now().millisecondsSinceEpoch}_${_clipCounter++}',
       stopMotionFrames: frames,
       duration: duration,
       recordedAt: .now(),
@@ -956,6 +962,53 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
         stackTrace: stackTrace,
       );
       return false;
+    }
+  }
+
+  /// Persists the in-progress stop-motion capture session as a single library
+  /// clip so the recording is preserved the instant it is shot — before the
+  /// user assembles it and opens the editor.
+  ///
+  /// [id] is stable for the lifetime of a capture session (derived from the
+  /// first frame), so repeated calls upsert the same library row as frames are
+  /// added. Assembling later reuses the same [id] (see [addStopMotionClip]),
+  /// updating this row rather than creating a duplicate.
+  ///
+  /// Returns true if the row was saved.
+  Future<bool> saveStopMotionSessionToLibrary({
+    required String id,
+    required List<StopMotionClipFrame> frames,
+    required double originalAspectRatio,
+    required model.AspectRatio targetAspectRatio,
+    required Duration duration,
+    String? thumbnailPath,
+    CameraLensMetadata? lensMetadata,
+  }) {
+    final clip = DivineVideoClip(
+      id: id,
+      stopMotionFrames: frames,
+      duration: duration,
+      recordedAt: DateTime.now(),
+      thumbnailPath: thumbnailPath,
+      targetAspectRatio: targetAspectRatio,
+      originalAspectRatio: originalAspectRatio,
+      lensMetadata: lensMetadata,
+    );
+    return saveClipToLibrary(clip);
+  }
+
+  /// Removes an abandoned stop-motion session's library row (its frames were
+  /// all undone). Deletes the row only; the frame files are owned and cleaned
+  /// up by the recorder.
+  Future<void> removeStopMotionSessionFromLibrary(String id) async {
+    try {
+      await ref.read(clipLibraryServiceProvider).deleteClipRow(id);
+    } catch (e) {
+      Log.warning(
+        '⚠️ Failed to remove stop-motion session $id from library: $e',
+        name: 'ClipManagerNotifier',
+        category: .video,
+      );
     }
   }
 }

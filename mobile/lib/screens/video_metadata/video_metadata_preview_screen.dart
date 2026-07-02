@@ -171,7 +171,13 @@ class _VideoPreviewContent extends ConsumerWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: stopMotionFrames != null
-                ? StopMotionPlayer(frames: stopMotionFrames)
+                ? StopMotionPlayer(
+                    frames: stopMotionFrames,
+                    cacheHeight:
+                        (MediaQuery.sizeOf(context).height *
+                                MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                  )
                 : DivineVideoPlayer(
                     controller: controller,
                     placeholder: VideoMetadataCapturePreviewThumbnail(

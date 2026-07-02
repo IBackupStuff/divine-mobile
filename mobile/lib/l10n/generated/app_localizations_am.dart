@@ -7958,6 +7958,43 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorDeleteSelectedItemSemanticLabel => 'የተመረጠውን ንጥል ሰርዝ';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => 'በአንድ ምስል ፍሬሞች';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ፍሬሞች',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'ፍሬሞች';
+
+  @override
+  String get libraryStopMotionClipLabel => 'የስቶፕ-ሞሽን ክሊፕ';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return 'በአንድ ምስል $count ፍሬሞች';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'በአንድ ምስል ፍሬሞችን ጨምር';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'በአንድ ምስል ፍሬሞችን ቀንስ';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'የስቶፕ-ሞሽን ፍሬም $position ከ$total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'አርትዕ';
 
   @override

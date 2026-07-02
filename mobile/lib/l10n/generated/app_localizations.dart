@@ -14082,6 +14082,54 @@ abstract class AppLocalizations {
   /// **'Delete selected item'**
   String get videoEditorDeleteSelectedItemSemanticLabel;
 
+  /// Label for the stop-motion control that sets how many output frames each captured still is held for.
+  ///
+  /// In en, this message translates to:
+  /// **'Frames per image'**
+  String get videoEditorStopMotionFramesPerImageLabel;
+
+  /// Short frames-per-image value shown on the stop-motion preview badge and action button (e.g. '2 frames').
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 frame} other{{count} frames}}'**
+  String videoEditorStopMotionFramesCount(int count);
+
+  /// Short label under the stop-motion frames-per-image action button in the timeline edit bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Frames'**
+  String get videoEditorStopMotionFramesPerImageButtonLabel;
+
+  /// Accessibility label for the badge that marks a clip in the library as a stop-motion recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop-motion clip'**
+  String get libraryStopMotionClipLabel;
+
+  /// Accessibility value announcing the current stop-motion hold length, in output frames per still.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} frames per image'**
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count);
+
+  /// Accessibility label for the button that lengthens each stop-motion still's hold.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase frames per image'**
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel;
+
+  /// Accessibility label for the button that shortens each stop-motion still's hold.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease frames per image'**
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel;
+
+  /// Accessibility label for a single still tile in the stop-motion timeline strip.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop-motion frame {position} of {total}'**
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total);
+
   /// No description provided for @videoEditorEditLabel.
   ///
   /// In en, this message translates to:

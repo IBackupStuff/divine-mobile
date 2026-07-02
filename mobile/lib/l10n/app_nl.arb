@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Ondertitels bijgewerkt",
     "subtitleEditorSaveError": "Ondertitels opslaan mislukt. Probeer het opnieuw.",
     "subtitleEditorRetry": "Opnieuw proberen",
-    "subtitleEditorCueHint": "Ondertiteltekst"
+    "subtitleEditorCueHint": "Ondertiteltekst",
+    "videoEditorStopMotionFramesPerImageLabel": "Frames per beeld",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} frames per beeld",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Frames per beeld verhogen",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Frames per beeld verlagen",
+    "videoEditorStopMotionFrameSemanticLabel": "Stop-motion-beeld {position} van {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 frame} other{{count} frames}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Frames",
+    "libraryStopMotionClipLabel": "Stop-motion-clip"
 }

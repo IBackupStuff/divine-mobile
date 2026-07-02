@@ -164,7 +164,14 @@ String _safeDecode(String segment) {
 /// Parse a URL path into a structured RouteContext
 /// Normalizes negative indices to 0 and decodes URL-encoded parameters
 RouteContext parseRoute(String path) {
-  final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+  // Callers pass full router locations, which may carry query parameters
+  // (e.g. /clips-only?type=video). Segment matching below must only ever see
+  // the path portion — otherwise the last segment becomes
+  // "clips-only?type=video", matches nothing, and the route falls through to
+  // the RouteType.home fallback (which the normalizer then "corrects" by
+  // yanking the user to /home/0).
+  final pathOnly = Uri.tryParse(path)?.path ?? path;
+  final segments = pathOnly.split('/').where((s) => s.isNotEmpty).toList();
 
   if (segments.isEmpty) {
     return const RouteContext(type: RouteType.home, videoIndex: 0);

@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
@@ -78,6 +80,27 @@ DivineVideoClip _createClipNoFile({String id = 'clip-no-file'}) {
     id: id,
     video: EditorVideo.network('https://example.com/vid.mp4'),
     duration: const Duration(seconds: 3),
+    recordedAt: DateTime(2025),
+    targetAspectRatio: .vertical,
+    originalAspectRatio: 9 / 16,
+  );
+}
+
+DivineVideoClip _createStopMotionClip({
+  String id = 'sm',
+  int frameCount = 3,
+}) {
+  final frames = [
+    for (var i = 0; i < frameCount; i++)
+      StopMotionClipFrame(
+        path: '$id-$i.jpg',
+        duration: StopMotionFrameOps.framesPerImageToDuration(1),
+      ),
+  ];
+  return DivineVideoClip(
+    id: id,
+    stopMotionFrames: frames,
+    duration: StopMotionFrameOps.totalDuration(frames),
     recordedAt: DateTime(2025),
     targetAspectRatio: .vertical,
     originalAspectRatio: 9 / 16,
@@ -430,6 +453,79 @@ void main() {
         seed: () => ClipEditorState(clips: twoClips),
         act: (bloc) => bloc.add(const ClipEditorClipSelected(5)),
         expect: () => <ClipEditorState>[],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'clears a stop-motion frame selection',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          selectedFrameIndex: 2,
+        ),
+        act: (bloc) => bloc.add(const ClipEditorClipSelected(0)),
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => s.selectedFrameIndex,
+            'selectedFrameIndex',
+            isNull,
+          ),
+        ],
+      );
+    });
+
+    group('ClipEditorFrameSelected', () {
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'selects the frame and enters editing on a stop-motion clip',
+        build: buildBloc,
+        seed: () => ClipEditorState(clips: [_createStopMotionClip()]),
+        act: (bloc) => bloc.add(const ClipEditorFrameSelected(1)),
+        expect: () => [
+          isA<ClipEditorState>()
+              .having((s) => s.selectedFrameIndex, 'selectedFrameIndex', 1)
+              .having((s) => s.isEditing, 'isEditing', isTrue)
+              .having((s) => s.currentClipIndex, 'currentClipIndex', 0),
+        ],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'is a no-op for a normal video composition',
+        build: buildBloc,
+        seed: () => ClipEditorState(clips: twoClips),
+        act: (bloc) => bloc.add(const ClipEditorFrameSelected(0)),
+        expect: () => <ClipEditorState>[],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'is a no-op for an out-of-range frame index',
+        build: buildBloc,
+        seed: () => ClipEditorState(clips: [_createStopMotionClip()]),
+        act: (bloc) => bloc.add(const ClipEditorFrameSelected(9)),
+        expect: () => <ClipEditorState>[],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'clamps the selection when a frame delete shrinks the clip',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          selectedFrameIndex: 2,
+          isEditing: true,
+        ),
+        act: (bloc) {
+          final clip = bloc.state.clips.first;
+          final shorter = StopMotionFrameOps.clipWithFrames(
+            clip,
+            StopMotionFrameOps.removeFrame(clip.stopMotionFrames!, 2),
+          );
+          bloc.add(ClipEditorClipUpdated(clipId: clip.id, clip: shorter));
+        },
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => s.selectedFrameIndex,
+            'selectedFrameIndex',
+            1,
+          ),
+        ],
       );
     });
 

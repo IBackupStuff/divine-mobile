@@ -22,6 +22,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' as model show AspectRatio, AudioSourceKind;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
@@ -31,9 +32,9 @@ import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dar
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/haptic_service.dart';
-import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
@@ -1461,11 +1462,29 @@ class VideoRecorderBloc
 
   // === Stop-motion handlers ===
 
-  /// Captures one still and appends it to [state.stopMotionFrames].
+  /// Hold duration of one captured still: the editor's default
+  /// frames-per-image at the render frame rate, so the library preview, the
+  /// timeline, and the assembled clip all agree.
+  static final Duration _stopMotionPerFrame =
+      StopMotionFrameOps.framesPerImageToDuration(
+        StopMotionFrameOps.defaultFramesPerImage,
+      );
+
+  /// Stable library-clip id for the capture session that begins with
+  /// [firstFramePath]. The first frame's filename is unique per session and
+  /// unchanged while the session grows, so the eager saves during capture and
+  /// the final assemble all upsert the same library row (no duplicate).
+  String _stopMotionSessionId(String firstFramePath) =>
+      'clip_sm_${p.basenameWithoutExtension(firstFramePath)}';
+
+  /// Captures one still, appends it to [state.stopMotionFrames], and persists
+  /// the growing session to the library.
   ///
   /// No video is rendered here — encoding one video per tap is far too slow
-  /// (seconds per frame). Frames are encoded into a single video only on
-  /// [VideoRecorderStopMotionAssembleRequested], so capture stays instant.
+  /// (seconds per frame). Frames are encoded into a single video only at
+  /// publish. The session is upserted to the library on every frame (not just
+  /// on the "Next"/assemble tap) so the recording is preserved the instant it
+  /// is shot, even if the user backs out before assembling.
   Future<void> _onStopMotionFrameCaptured(
     VideoRecorderStopMotionFrameCaptured event,
     Emitter<VideoRecorderBlocState> emit,
@@ -1486,15 +1505,22 @@ class VideoRecorderBloc
       return;
     }
 
+    final framePaths = [...state.stopMotionFrames, photo.filePath];
     emit(
       state.copyWith(
-        stopMotionFrames: [...state.stopMotionFrames, photo.filePath],
+        stopMotionFrames: framePaths,
         stopMotionStatus: StopMotionStatus.idle,
       ),
     );
+
+    // Fire-and-forget so shooting stays instant; the library row is upserted
+    // by the stable session id, so an out-of-order write just re-writes it.
+    unawaited(_persistStopMotionSession(framePaths));
   }
 
-  /// Removes the last captured stop-motion frame and deletes its file.
+  /// Removes the last captured stop-motion frame, deletes its file, and
+  /// re-syncs the session's library row to the remaining frames (dropping the
+  /// row entirely once every frame has been undone).
   Future<void> _onStopMotionFrameUndone(
     VideoRecorderStopMotionFrameUndone event,
     Emitter<VideoRecorderBlocState> emit,
@@ -1503,10 +1529,51 @@ class VideoRecorderBloc
     if (frames.isEmpty) return;
 
     final removed = frames.last;
-    emit(
-      state.copyWith(stopMotionFrames: frames.sublist(0, frames.length - 1)),
-    );
+    final remaining = frames.sublist(0, frames.length - 1);
+    emit(state.copyWith(stopMotionFrames: remaining));
     unawaited(_deleteFrameFile(removed));
+
+    if (remaining.isEmpty) {
+      // Whole session undone — drop its library row. The frame file is deleted
+      // above, so a row-only delete is correct here.
+      unawaited(
+        _readClipManager().removeStopMotionSessionFromLibrary(
+          _stopMotionSessionId(frames.first),
+        ),
+      );
+    } else {
+      unawaited(_persistStopMotionSession(remaining));
+    }
+  }
+
+  /// Upserts the current capture session (the stills at [framePaths]) as a
+  /// single library clip. Shared by capture and undo; keyed by
+  /// [_stopMotionSessionId] so every call targets the same row.
+  Future<void> _persistStopMotionSession(List<String> framePaths) async {
+    if (framePaths.isEmpty) return;
+    // Skip unreadable captures (interrupted writes leave empty files) so a
+    // corrupt still never persists into the session's library clip.
+    final frames = StopMotionFrameOps.existingFrames([
+      for (final path in framePaths)
+        StopMotionClipFrame(path: path, duration: _stopMotionPerFrame),
+    ]);
+    if (frames.isEmpty) return;
+    final saved = await _readClipManager().saveStopMotionSessionToLibrary(
+      id: _stopMotionSessionId(framePaths.first),
+      frames: frames,
+      originalAspectRatio: state.aspectRatio.value,
+      targetAspectRatio: state.aspectRatio,
+      duration: _stopMotionPerFrame * frames.length,
+      thumbnailPath: frames.first.path,
+      lensMetadata: _cameraService.currentLensMetadata,
+    );
+    if (!saved) {
+      Log.warning(
+        '⚠️ Stop-motion session save to library failed',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
   }
 
   /// Saves the captured frames as a frames-based stop-motion clip in the clip
@@ -1548,26 +1615,29 @@ class VideoRecorderBloc
   /// Adds the captured [framePaths] to the clip manager as a frames-based
   /// stop-motion clip and saves it to the library. Frame files are kept (not
   /// deleted) since they are the clip's source of truth.
+  ///
+  /// Reuses the capture session's library id so the row already written during
+  /// capture is updated in place rather than duplicated.
   Future<void> _ingestStopMotionClip(List<String> framePaths) async {
     final clipManager = _readClipManager();
 
-    final perFrame = Duration(
-      microseconds:
-          (Duration.microsecondsPerSecond /
-                  StopMotionRenderService.defaultFrameRate)
-              .round(),
-    );
-    final frames = [
+    // Drop unreadable captures; a session with no readable still is a failed
+    // assemble (surfaced by the caller's failure snackbar).
+    final frames = StopMotionFrameOps.existingFrames([
       for (final path in framePaths)
-        StopMotionClipFrame(path: path, duration: perFrame),
-    ];
+        StopMotionClipFrame(path: path, duration: _stopMotionPerFrame),
+    ]);
+    if (frames.isEmpty) {
+      throw StateError('No readable stop-motion stills to assemble');
+    }
 
     final clip = clipManager.addStopMotionClip(
+      id: _stopMotionSessionId(framePaths.first),
       frames: frames,
       originalAspectRatio: state.aspectRatio.value,
       targetAspectRatio: state.aspectRatio,
-      duration: perFrame * frames.length,
-      thumbnailPath: framePaths.first,
+      duration: _stopMotionPerFrame * frames.length,
+      thumbnailPath: frames.first.path,
       lensMetadata: _cameraService.currentLensMetadata,
     );
 
@@ -1647,6 +1717,12 @@ class VideoRecorderBloc
         showLastClipOverlay: state.showLastClipOverlay,
         recorderMode: state.recorderMode,
         showGridLines: state.showGridLines,
+        // Preserve the in-progress stop-motion capture session: a camera-field
+        // re-sync must not wipe already-captured frames, or the session would
+        // split into several one-frame recordings (and lose frames on
+        // assemble).
+        stopMotionFrames: state.stopMotionFrames,
+        stopMotionStatus: state.stopMotionStatus,
       ),
     );
   }

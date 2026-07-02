@@ -8308,6 +8308,44 @@ class AppLocalizationsRo extends AppLocalizations {
       'Șterge elementul selectat';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => 'Cadre pe imagine';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cadre',
+      one: '1 cadru',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'Cadre';
+
+  @override
+  String get libraryStopMotionClipLabel => 'Clip stop-motion';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '$count cadre pe imagine';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'Mărește cadrele pe imagine';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'Micșorează cadrele pe imagine';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'Cadru stop-motion $position din $total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'Editează';
 
   @override

@@ -7799,6 +7799,43 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorDeleteSelectedItemSemanticLabel => '選択したアイテムを削除';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => '1枚あたりのフレーム数';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countフレーム',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'フレーム';
+
+  @override
+  String get libraryStopMotionClipLabel => 'ストップモーションクリップ';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '1枚あたり$countフレーム';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      '1枚あたりのフレーム数を増やす';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      '1枚あたりのフレーム数を減らす';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'ストップモーションのフレーム $total枚中$position枚目';
+  }
+
+  @override
   String get videoEditorEditLabel => '編集';
 
   @override

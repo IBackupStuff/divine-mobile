@@ -34,6 +34,7 @@ class ClipEditorState extends Equatable {
     this.mergingRenderId,
     this.lastMergeResult,
     this.lastClipsRemovedResult,
+    this.selectedFrameIndex,
   });
 
   /// Local copy of clips managed by this editor session.
@@ -155,6 +156,11 @@ class ClipEditorState extends Equatable {
   /// rebase timeline markers and commit the new clip list to editor history.
   final ClipsRemovedResult? lastClipsRemovedResult;
 
+  /// Index of the currently selected still in a frames-only stop-motion clip,
+  /// or `null` when no frame is selected (or the composition is not
+  /// stop-motion). Drives the per-frame action bar and tile highlight.
+  final int? selectedFrameIndex;
+
   /// Total wall-clock duration of all clips (respecting trim and playback speed).
   Duration get totalDuration =>
       clips.fold(Duration.zero, (sum, clip) => sum + clip.playbackDuration);
@@ -192,6 +198,8 @@ class ClipEditorState extends Equatable {
     bool clearMergingRenderId = false,
     ClipMergeResult? lastMergeResult,
     ClipsRemovedResult? lastClipsRemovedResult,
+    int? selectedFrameIndex,
+    bool clearSelectedFrameIndex = false,
   }) {
     return ClipEditorState(
       clips: clips ?? this.clips,
@@ -230,6 +238,9 @@ class ClipEditorState extends Equatable {
       lastMergeResult: lastMergeResult ?? this.lastMergeResult,
       lastClipsRemovedResult:
           lastClipsRemovedResult ?? this.lastClipsRemovedResult,
+      selectedFrameIndex: clearSelectedFrameIndex
+          ? null
+          : (selectedFrameIndex ?? this.selectedFrameIndex),
     );
   }
 
@@ -265,6 +276,7 @@ class ClipEditorState extends Equatable {
     identityHashCode(lastMergeResult),
     // Identity-only: each ClipsRemovedResult is a fresh instance per removal.
     identityHashCode(lastClipsRemovedResult),
+    selectedFrameIndex,
   ];
 }
 

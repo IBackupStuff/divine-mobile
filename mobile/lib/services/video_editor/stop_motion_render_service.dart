@@ -6,6 +6,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -17,11 +18,12 @@ class StopMotionRenderService {
 
   static const _logName = 'StopMotionRenderService';
 
-  /// Default number of frames shown per second in the assembled video.
+  /// Output frame rate of the assembled video.
   ///
-  /// Each captured still becomes one frame held for 1/[defaultFrameRate]s, so a
-  /// sequence of N stills plays as an N/[defaultFrameRate]s stop-motion clip.
-  static const double defaultFrameRate = 12;
+  /// 24fps is the classic stop-motion base: "frames per image" counts film
+  /// frames, so a hold of 2 ("on twos") shows 12 images per second — N stills
+  /// at the default hold play as N/12 s.
+  static const double defaultFrameRate = 24;
 
   /// Test-only override for [assemble].
   ///
@@ -29,44 +31,40 @@ class StopMotionRenderService {
   /// real native render. Reset to `null` in `tearDown`.
   @visibleForTesting
   static Future<String?> Function({
-    required List<String> framePaths,
+    required List<StopMotionClipFrame> frames,
     required model.AspectRatio aspectRatio,
-    int framesPerShot,
     double frameRate,
   })?
   assembleOverride;
 
-  /// Assembles [framePaths] (captured JPEG stills, in order) into a single
-  /// silent mp4 using pro_video_editor's stop-motion encoder.
+  /// Assembles [frames] (captured stills with their hold times, in order)
+  /// into a single silent mp4 using pro_video_editor's stop-motion encoder.
   ///
-  /// [aspectRatio] sets the output resolution and a centered crop
-  /// ([StopMotionFit.cover]). [framesPerShot] holds each still for that many
-  /// output frames (the 1–10 "frames per shot" control).
+  /// Each still is held for its own [StopMotionClipFrame.duration], so
+  /// per-frame edits from the editor survive into the output. [aspectRatio]
+  /// sets the output resolution and a centered crop ([StopMotionFit.cover]).
   ///
   /// Returns the output file path, or null if rendering failed or was
   /// cancelled. The native render path needs a device build to exercise.
   static Future<String?> assemble({
-    required List<String> framePaths,
+    required List<StopMotionClipFrame> frames,
     required model.AspectRatio aspectRatio,
-    int framesPerShot = 1,
     double frameRate = defaultFrameRate,
   }) async {
     final override = assembleOverride;
     if (override != null) {
       return override(
-        framePaths: framePaths,
+        frames: frames,
         aspectRatio: aspectRatio,
-        framesPerShot: framesPerShot,
         frameRate: frameRate,
       );
     }
 
-    if (framePaths.isEmpty) return null;
+    if (frames.isEmpty) return null;
 
     return _renderToFile(
-      framePaths: framePaths,
+      frames: frames,
       aspectRatio: aspectRatio,
-      framesPerShot: framesPerShot,
       frameRate: frameRate,
     );
   }
@@ -87,38 +85,39 @@ class StopMotionRenderService {
     if (frames == null) return clip;
 
     final outputPath = await assemble(
-      framePaths: [for (final frame in frames) frame.path],
+      frames: frames,
       aspectRatio: clip.targetAspectRatio,
     );
     if (outputPath == null) return null;
     return clip.copyWith(video: EditorVideo.file(outputPath));
   }
 
-  /// Repeats [framePaths] an integer number of times until the sequence's total
-  /// duration (each frame held for [perFrame]) reaches
+  /// Repeats [frames] an integer number of times until the sequence's total
+  /// duration (each frame held for its own hold time) reaches
   /// [VideoEditorConstants.stopMotionMinOutputDuration].
   ///
   /// Ultra-short clips (a single still ≈ 83ms) make looping players
   /// stutter/oscillate; repeating preserves the per-frame timing and keeps the
   /// loop seam clean (last frame → first frame). A sequence already at or above
   /// the minimum is returned unchanged.
-  static List<String> framesForMinOutputDuration(
-    List<String> framePaths,
-    Duration perFrame,
+  static List<StopMotionClipFrame> framesForMinOutputDuration(
+    List<StopMotionClipFrame> frames,
   ) {
-    if (framePaths.isEmpty) return framePaths;
-    final singlePass = perFrame * framePaths.length;
+    if (frames.isEmpty) return frames;
+    final singlePass = frames.fold(
+      Duration.zero,
+      (sum, frame) => sum + frame.duration,
+    );
     const minDuration = VideoEditorConstants.stopMotionMinOutputDuration;
     final loops = singlePass >= minDuration || singlePass == Duration.zero
         ? 1
         : (minDuration.inMicroseconds / singlePass.inMicroseconds).ceil();
-    return [for (var i = 0; i < loops; i++) ...framePaths];
+    return [for (var i = 0; i < loops; i++) ...frames];
   }
 
   static Future<String?> _renderToFile({
-    required List<String> framePaths,
+    required List<StopMotionClipFrame> frames,
     required model.AspectRatio aspectRatio,
-    required int framesPerShot,
     required double frameRate,
   }) async {
     final outputDir = await getApplicationDocumentsDirectory();
@@ -127,19 +126,14 @@ class StopMotionRenderService {
       'stop_motion_${DateTime.now().microsecondsSinceEpoch}.mp4',
     );
 
-    final perFrame = Duration(
-      microseconds: (framesPerShot * Duration.microsecondsPerSecond / frameRate)
-          .round(),
-    );
-
-    final renderedPaths = framesForMinOutputDuration(framePaths, perFrame);
+    final renderedFrames = framesForMinOutputDuration(frames);
 
     final data = StopMotionRenderData(
       frames: [
-        for (final framePath in renderedPaths)
+        for (final frame in renderedFrames)
           StopMotionFrame(
-            image: EditorLayerImage.file(framePath),
-            duration: perFrame,
+            image: EditorLayerImage.file(frame.path),
+            duration: frame.duration,
           ),
       ],
       frameRate: frameRate,
@@ -151,8 +145,8 @@ class StopMotionRenderService {
 
     try {
       Log.debug(
-        '🎞️ Assembling ${framePaths.length} stop-motion frame(s) '
-        '(framesPerShot: $framesPerShot, fps: $frameRate)',
+        '🎞️ Assembling ${frames.length} stop-motion frame(s) '
+        '(rendered: ${renderedFrames.length}, fps: $frameRate)',
         name: _logName,
         category: LogCategory.video,
       );

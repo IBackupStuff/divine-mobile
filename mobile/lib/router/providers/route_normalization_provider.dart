@@ -67,7 +67,8 @@ final routeNormalizationProvider = Provider<void>((ref) {
 
   // Set up listener on router delegate to detect navigation changes
   void listener() {
-    final loc = router.routeInformationProvider.value.uri.toString();
+    final uri = router.routeInformationProvider.value.uri;
+    final loc = uri.toString();
     if (shouldSkipRouteNormalization(loc)) {
       Log.info(
         '🔄 RouteNormalizationProvider: skipping normalization for $loc',
@@ -76,22 +77,30 @@ final routeNormalizationProvider = Provider<void>((ref) {
       return;
     }
 
-    // Parse and rebuild to get canonical form
-    final parsed = parseRoute(loc);
-    final canonical = buildRoute(parsed);
+    // Parse and rebuild to get the canonical form. Only the *path* is
+    // normalized; query parameters are route input (e.g. the library's
+    // ?type= clip filter) and must survive normalization untouched.
+    final parsed = parseRoute(uri.path);
+    final canonicalPath = buildRoute(parsed);
 
     // If not canonical, schedule post-frame redirect
-    if (canonical != loc) {
+    if (canonicalPath != uri.path) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        // Check again before redirecting to avoid loops if location changed
-        final now = router.routeInformationProvider.value.uri.toString();
-        if (now != canonical) {
-          Log.info(
-            '🔄 Normalizing route from $now to $canonical',
-            name: 'RouteNormalizationProvider',
-          );
-          router.go(canonical);
-        }
+        // Re-check before redirecting: skip when navigation moved on in the
+        // meantime (redirecting then would yank the user off the new route)
+        // or the location already became canonical.
+        final now = router.routeInformationProvider.value.uri;
+        if (now.toString() != loc || now.path == canonicalPath) return;
+
+        final canonical = Uri(
+          path: canonicalPath,
+          query: now.query.isEmpty ? null : now.query,
+        ).toString();
+        Log.info(
+          '🔄 Normalizing route from $now to $canonical',
+          name: 'RouteNormalizationProvider',
+        );
+        router.go(canonical);
       });
     }
   }

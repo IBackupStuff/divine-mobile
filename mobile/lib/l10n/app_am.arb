@@ -4511,5 +4511,13 @@
     "subtitleEditorSaveSuccess": "የትርጉም ጽሑፎች ተዘምነዋል",
     "subtitleEditorSaveError": "የትርጉም ጽሑፎችን ማስቀመጥ አልተቻለም። እንደገና ይሞክሩ።",
     "subtitleEditorRetry": "እንደገና ሞክር",
-    "subtitleEditorCueHint": "የመግለጫ ጽሑፍ"
+    "subtitleEditorCueHint": "የመግለጫ ጽሑፍ",
+    "videoEditorStopMotionFramesPerImageLabel": "በአንድ ምስል ፍሬሞች",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "በአንድ ምስል {count} ፍሬሞች",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "በአንድ ምስል ፍሬሞችን ጨምር",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "በአንድ ምስል ፍሬሞችን ቀንስ",
+    "videoEditorStopMotionFrameSemanticLabel": "የስቶፕ-ሞሽን ፍሬም {position} ከ{total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, other{{count} ፍሬሞች}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "ፍሬሞች",
+    "libraryStopMotionClipLabel": "የስቶፕ-ሞሽን ክሊፕ"
 }

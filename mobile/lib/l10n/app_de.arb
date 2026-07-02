@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Untertitel aktualisiert",
     "subtitleEditorSaveError": "Untertitel konnten nicht gespeichert werden. Versuch es erneut.",
     "subtitleEditorRetry": "Erneut versuchen",
-    "subtitleEditorCueHint": "Untertiteltext"
+    "subtitleEditorCueHint": "Untertiteltext",
+    "videoEditorStopMotionFramesPerImageLabel": "Frames pro Bild",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} Frames pro Bild",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Frames pro Bild erhöhen",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Frames pro Bild verringern",
+    "videoEditorStopMotionFrameSemanticLabel": "Stop-Motion-Bild {position} von {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 Frame} other{{count} Frames}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Frames",
+    "libraryStopMotionClipLabel": "Stop-Motion-Clip"
 }

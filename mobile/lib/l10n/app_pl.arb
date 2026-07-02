@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Napisy zaktualizowane",
     "subtitleEditorSaveError": "Nie udało się zapisać napisów. Spróbuj ponownie.",
     "subtitleEditorRetry": "Spróbuj ponownie",
-    "subtitleEditorCueHint": "Tekst napisu"
+    "subtitleEditorCueHint": "Tekst napisu",
+    "videoEditorStopMotionFramesPerImageLabel": "Klatki na obraz",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} klatek na obraz",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Zwiększ liczbę klatek na obraz",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Zmniejsz liczbę klatek na obraz",
+    "videoEditorStopMotionFrameSemanticLabel": "Klatka poklatkowa {position} z {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 klatka} few{{count} klatki} many{{count} klatek} other{{count} klatki}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Klatki",
+    "libraryStopMotionClipLabel": "Klip poklatkowy"
 }

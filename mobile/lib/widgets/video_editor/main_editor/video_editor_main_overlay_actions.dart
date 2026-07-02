@@ -6,11 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 
 /// Top action bar for the video editor.
@@ -56,6 +59,23 @@ class _TopActions extends ConsumerWidget {
       videoEditorProvider.select((s) => s.isAutosavedDraft),
     );
 
+    // Frames-per-image control lives in the toolbar's center slot — top
+    // centre, inline between the back and done buttons — only for a
+    // stop-motion composition.
+    final ({String clipId, int? value})? stopMotionData = context.select((
+      ClipEditorBloc b,
+    ) {
+      final clips = b.state.clips;
+      if (!isStopMotionComposition(clips)) return null;
+      final clip = clips.first;
+      final frames = clip.stopMotionFrames ?? const [];
+      if (frames.isEmpty) return null;
+      return (
+        clipId: clip.id,
+        value: StopMotionFrameOps.globalDefaultFramesPerImage(frames),
+      );
+    });
+
     return PopScope(
       canPop: !isAutosavedDraft,
       onPopInvokedWithResult: (didPop, result) {
@@ -70,6 +90,12 @@ class _TopActions extends ConsumerWidget {
       child: VideoEditorToolbar(
         closeIcon: .caretLeft,
         doneIcon: .arrowRight,
+        center: stopMotionData == null
+            ? null
+            : _StopMotionFramesChip(
+                clipId: stopMotionData.clipId,
+                value: stopMotionData.value,
+              ),
         onClose: () {
           if (isAutosavedDraft) {
             _onClosePressed(
@@ -188,6 +214,60 @@ class _BottomActions extends StatelessWidget {
           ),
           size: .small,
           type: .ghostSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+/// A tappable "N frames" chip shown in the editor toolbar's centre slot (top
+/// centre, between the back and done buttons) while editing a frames-only
+/// stop-motion clip. Opens the frames-per-image wheel sheet and applies the
+/// chosen hold as the global default (per-frame overrides are preserved).
+class _StopMotionFramesChip extends StatelessWidget {
+  const _StopMotionFramesChip({required this.clipId, required this.value});
+
+  final String clipId;
+
+  /// The global-default frames-per-image, or `null` when the stills' defaults
+  /// disagree (only per-frame overrides remain).
+  final int? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = value != null
+        ? context.l10n.videoEditorStopMotionFramesCount(value!)
+        : context.l10n.videoEditorStopMotionFramesPerImageLabel;
+
+    return Semantics(
+      button: true,
+      value: value != null
+          ? context.l10n.videoEditorStopMotionFramesPerImageValueSemanticLabel(
+              value!,
+            )
+          : null,
+      child: GestureDetector(
+        onTap: () => editStopMotionGlobalHold(context, clipId: clipId),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: VineTheme.surfaceBackground.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                const DivineIcon(
+                  icon: .imagesSquare,
+                  color: VineTheme.lightText,
+                  size: 16,
+                ),
+                Text(label, style: VineTheme.labelLargeFont()),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -197,7 +197,15 @@ class _VideoClipPreviewSheetState extends ConsumerState<VideoClipPreview> {
                           builder: (context) {
                             if (widget.clip.stopMotionFrames
                                 case final frames?) {
-                              return StopMotionPlayer(frames: frames);
+                              return StopMotionPlayer(
+                                frames: frames,
+                                cacheHeight:
+                                    (MediaQuery.sizeOf(context).height *
+                                            MediaQuery.devicePixelRatioOf(
+                                              context,
+                                            ))
+                                        .round(),
+                              );
                             }
 
                             final vw = _controller?.state.videoWidth ?? 0;

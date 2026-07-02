@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Altyazılar güncellendi",
     "subtitleEditorSaveError": "Altyazılar kaydedilemedi. Tekrar dene.",
     "subtitleEditorRetry": "Tekrar dene",
-    "subtitleEditorCueHint": "Altyazı metni"
+    "subtitleEditorCueHint": "Altyazı metni",
+    "videoEditorStopMotionFramesPerImageLabel": "Görüntü başına kare",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "Görüntü başına {count} kare",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Görüntü başına kareyi artır",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Görüntü başına kareyi azalt",
+    "videoEditorStopMotionFrameSemanticLabel": "Stop motion karesi {position}/{total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, other{{count} kare}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Kare",
+    "libraryStopMotionClipLabel": "Stop motion klibi"
 }

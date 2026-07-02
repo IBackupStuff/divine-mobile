@@ -76,4 +76,77 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(currentPath(tester), frames[0].path);
   });
+
+  group('controlled mode (position provided)', () {
+    testWidgets('renders the frame for the supplied position', (tester) async {
+      // Frames are 3 × 100ms → windows [0,100)=0, [100,200)=1, [200,300)=2.
+      await tester.pumpWidget(
+        wrap(
+          StopMotionPlayer(
+            frames: frames,
+            position: const Duration(milliseconds: 50),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(currentPath(tester), frames[0].path);
+
+      await tester.pumpWidget(
+        wrap(
+          StopMotionPlayer(
+            frames: frames,
+            position: const Duration(milliseconds: 150),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(currentPath(tester), frames[1].path);
+
+      await tester.pumpWidget(
+        wrap(
+          StopMotionPlayer(
+            frames: frames,
+            position: const Duration(milliseconds: 250),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(currentPath(tester), frames[2].path);
+    });
+
+    testWidgets('loops the frame index past the sequence length', (
+      tester,
+    ) async {
+      // 350ms % 300ms total = 50ms → back to the first frame.
+      await tester.pumpWidget(
+        wrap(
+          StopMotionPlayer(
+            frames: frames,
+            position: const Duration(milliseconds: 350),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(currentPath(tester), frames[0].path);
+    });
+
+    testWidgets('does not self-advance — the frame is frozen for a fixed '
+        'position', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          StopMotionPlayer(
+            frames: frames,
+            position: const Duration(milliseconds: 50),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(currentPath(tester), frames[0].path);
+
+      // Pumping wall-clock time must not change the frame: the caller owns the
+      // clock, so play/pause is respected (a paused editor holds the frame).
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(currentPath(tester), frames[0].path);
+    });
+  });
 }

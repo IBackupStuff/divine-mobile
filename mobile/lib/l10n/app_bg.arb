@@ -4517,5 +4517,13 @@
     "subtitleEditorSaveSuccess": "Субтитрите са обновени",
     "subtitleEditorSaveError": "Субтитрите не можаха да се запазят. Опитай пак.",
     "subtitleEditorRetry": "Опитай пак",
-    "subtitleEditorCueHint": "Текст на надписа"
+    "subtitleEditorCueHint": "Текст на надписа",
+    "videoEditorStopMotionFramesPerImageLabel": "Кадри на изображение",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} кадъра на изображение",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Увеличаване на кадрите на изображение",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Намаляване на кадрите на изображение",
+    "videoEditorStopMotionFrameSemanticLabel": "Стоп-моушън кадър {position} от {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 кадър} other{{count} кадъра}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Кадри",
+    "libraryStopMotionClipLabel": "Стоп-моушън клип"
 }

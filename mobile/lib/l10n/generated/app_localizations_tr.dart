@@ -8092,6 +8092,43 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorDeleteSelectedItemSemanticLabel => 'Seçili öğeyi sil';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => 'Görüntü başına kare';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kare',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'Kare';
+
+  @override
+  String get libraryStopMotionClipLabel => 'Stop motion klibi';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return 'Görüntü başına $count kare';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'Görüntü başına kareyi artır';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'Görüntü başına kareyi azalt';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'Stop motion karesi $position/$total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'Düzenle';
 
   @override

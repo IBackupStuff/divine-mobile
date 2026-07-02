@@ -8218,6 +8218,44 @@ class AppLocalizationsFil extends AppLocalizations {
       'Burahin ang napiling item';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel =>
+      'Mga frame kada larawan';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count frame',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'Mga frame';
+
+  @override
+  String get libraryStopMotionClipLabel => 'Stop-motion na clip';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '$count na frame kada larawan';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'Dagdagan ang mga frame kada larawan';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'Bawasan ang mga frame kada larawan';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'Stop-motion frame $position ng $total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'I-edit';
 
   @override

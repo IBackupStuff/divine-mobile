@@ -8124,6 +8124,44 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ta bort valt objekt';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => 'Bildrutor per bild';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bildrutor',
+      one: '1 bildruta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'Bildrutor';
+
+  @override
+  String get libraryStopMotionClipLabel => 'Stop motion-klipp';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '$count bildrutor per bild';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'Öka bildrutor per bild';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'Minska bildrutor per bild';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'Stop motion-bild $position av $total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'Redigera';
 
   @override

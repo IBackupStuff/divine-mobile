@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "字幕を更新したよ",
     "subtitleEditorSaveError": "字幕を保存できなかったよ。もう一回試してね。",
     "subtitleEditorRetry": "再試行",
-    "subtitleEditorCueHint": "キャプションのテキスト"
+    "subtitleEditorCueHint": "キャプションのテキスト",
+    "videoEditorStopMotionFramesPerImageLabel": "1枚あたりのフレーム数",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "1枚あたり{count}フレーム",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "1枚あたりのフレーム数を増やす",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "1枚あたりのフレーム数を減らす",
+    "videoEditorStopMotionFrameSemanticLabel": "ストップモーションのフレーム {total}枚中{position}枚目",
+    "videoEditorStopMotionFramesCount": "{count, plural, other{{count}フレーム}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "フレーム",
+    "libraryStopMotionClipLabel": "ストップモーションクリップ"
 }

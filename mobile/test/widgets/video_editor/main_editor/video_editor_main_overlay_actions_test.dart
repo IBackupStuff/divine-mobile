@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -73,12 +74,14 @@ void main() {
 
   group(VideoEditorMainOverlayActions, () {
     late _MockVideoEditorMainBloc mockBloc;
+    late ClipEditorBloc clipEditorBloc;
     late MockGoRouter mockGoRouter;
     late _FakeVideoEditorNotifier fakeVideoEditorNotifier;
     late _FakeVideoPublishNotifier fakeVideoPublishNotifier;
 
     setUp(() {
       mockBloc = _MockVideoEditorMainBloc();
+      clipEditorBloc = ClipEditorBloc(onFinalClipInvalidated: () {});
       mockGoRouter = MockGoRouter();
 
       when(() => mockBloc.state).thenReturn(const VideoEditorMainState());
@@ -87,6 +90,8 @@ void main() {
       ).thenAnswer((_) => const Stream<VideoEditorMainState>.empty());
       when(() => mockGoRouter.pop<Object?>(any())).thenAnswer((_) async {});
     });
+
+    tearDown(() => clipEditorBloc.close());
 
     Widget buildWidget({
       VideoEditorMainState? state,
@@ -134,8 +139,11 @@ void main() {
                 onOpenMusicLibrary: () {},
                 onOpenVoiceOver: () {},
                 onAddEditTextLayer: ([layer]) async => null,
-                child: BlocProvider<VideoEditorMainBloc>.value(
-                  value: mockBloc,
+                child: MultiBlocProvider(
+                  providers: [
+                    BlocProvider<VideoEditorMainBloc>.value(value: mockBloc),
+                    BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
+                  ],
                   child: const VideoEditorMainOverlayActions(),
                 ),
               ),

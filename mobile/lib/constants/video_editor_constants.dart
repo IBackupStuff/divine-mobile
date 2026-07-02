@@ -48,6 +48,15 @@ class VideoEditorConstants {
   /// timing and keeping the loop seamless.
   static const stopMotionMinOutputDuration = Duration(seconds: 1);
 
+  /// Minimum spacing between playback-position updates the frames-only
+  /// stop-motion playhead pushes into the editor timeline.
+  ///
+  /// The playhead ticker fires at the display refresh rate, but the timeline
+  /// only needs a coarse position stream to chase (it animates between
+  /// updates). Throttling to this interval keeps scrolling smooth without
+  /// flooding the bloc with ~60 position events per second.
+  static const stopMotionPlayheadEmitInterval = Duration(milliseconds: 40);
+
   /// Default time offset for extracting video thumbnails.
   static const defaultThumbnailExtractTime = Duration(milliseconds: 200);
 

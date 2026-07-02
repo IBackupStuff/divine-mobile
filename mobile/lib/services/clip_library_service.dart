@@ -4,6 +4,7 @@
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
@@ -129,12 +130,34 @@ class ClipLibraryService {
   /// row must never hide every other clip.
   Future<List<DivineVideoClip>> getAllClips() async {
     try {
-      final rows = await _clipsDao.getLibraryClips(ownerPubkey: ownerPubkey);
+      // Include the autosave draft so a just-recorded clip (which the editor
+      // immediately holds in its autosave draft) stays visible in the library.
+      // Clips saved into a named project keep their own draftId and stay hidden.
+      final rows = await _clipsDao.getLibraryClips(
+        ownerPubkey: ownerPubkey,
+        includeAutosaveDraftId: VideoEditorConstants.autoSaveId,
+      );
+
       final documentsPath = await getDocumentsPath();
-      return rows
-          .map((row) => _tryParseClipRow(row, documentsPath, label: 'clip'))
-          .whereType<DivineVideoClip>()
-          .toList();
+
+      // The clips table keys draft clips by `<draftId>:<clipId>` (composite row
+      // id) but library clips by the plain clip id, so the same clip can have a
+      // library row (draftId == null) and an autosave-draft row. Both parse to
+      // the same `clip.id`; keep one per clip id — preferring the library row —
+      // so a just-recorded clip shows exactly once.
+      final byClipId = <String, ({String? draftId, DivineVideoClip clip})>{};
+      for (final row in rows) {
+        final clip = _tryParseClipRow(row, documentsPath, label: 'clip');
+        if (clip == null) continue;
+        final existing = byClipId[clip.id];
+        if (existing == null ||
+            (existing.draftId != null && row.draftId == null)) {
+          byClipId[clip.id] = (draftId: row.draftId, clip: clip);
+        }
+      }
+
+      return byClipId.values.map((e) => e.clip).toList()
+        ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
     } catch (e) {
       Log.error(
         '❌ Failed to load clips: $e',
@@ -220,6 +243,14 @@ class ClipLibraryService {
     }
     return ok;
   }
+
+  /// Permanently removes a single clip's library row, leaving its on-disk
+  /// files untouched.
+  ///
+  /// Used to drop an abandoned in-progress stop-motion session (all frames
+  /// undone): the recorder owns and cleans up the frame files, so — unlike
+  /// [hardDelete] — this must not delete them.
+  Future<void> deleteClipRow(String id) => _clipsDao.deleteClip(id);
 
   /// Permanently delete a clip and its files. Skips the trash; use
   /// [softDelete] for the standard delete flow.

@@ -183,7 +183,8 @@ class DivineVideoClip {
   bool get isProcessing =>
       processingCompleter != null && !processingCompleter!.isCompleted;
 
-  /// Whether this clip's source video file currently exists on disk.
+  /// Whether this clip's source media currently exists on disk: the video
+  /// file, or — for a frames-only stop-motion clip — every captured still.
   ///
   /// A clip can outlive its media: when a clip is removed, [FileCleanupService]
   /// deletes its source file as soon as no clip/draft row references it — but
@@ -193,6 +194,15 @@ class DivineVideoClip {
   /// and freezes the editor, so restore/undo paths use this to drop orphaned
   /// clips. See `restoreDraft` and `VideoEditorCanvas._syncMainCapabilities`.
   bool get hasResolvableVideoFile {
+    // Frames-only stop-motion clips have no video by design; their stills are
+    // the source of truth. Without this branch every history sync would treat
+    // the clip as orphaned and step the editor history backwards, silently
+    // undoing frame edits.
+    final frames = stopMotionFrames;
+    if (frames != null) {
+      return frames.isNotEmpty &&
+          frames.every((frame) => File(frame.path).existsSync());
+    }
     final path = video?.file?.path;
     return path != null && File(path).existsSync();
   }

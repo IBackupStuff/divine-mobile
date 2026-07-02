@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
@@ -97,6 +98,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
 
     // Clip selection
     on<ClipEditorClipSelected>(_onClipSelected);
+    on<ClipEditorFrameSelected>(_onFrameSelected);
 
     // Multi-select
     on<ClipEditorMultiSelectStarted>(_onMultiSelectStarted);
@@ -217,7 +219,20 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     final newClips = List<DivineVideoClip>.of(state.clips)
       ..[index] = event.clip;
 
-    emit(state.copyWith(clips: List.unmodifiable(newClips)));
+    // A frame delete/reorder replaces the stop-motion clip with a shorter or
+    // reordered frame list; clamp the selection so it never points past the end.
+    final selected = state.selectedFrameIndex;
+    final frames = event.clip.stopMotionFrames;
+    final clampedSelection = selected != null && frames != null
+        ? selected.clamp(0, frames.length - 1)
+        : selected;
+
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        selectedFrameIndex: clampedSelection,
+      ),
+    );
   }
 
   // === CLIP SELECTION ===
@@ -238,6 +253,29 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       state.copyWith(
         currentClipIndex: event.index,
         splitPosition: Duration.zero,
+        clearSelectedFrameIndex: true,
+      ),
+    );
+  }
+
+  void _onFrameSelected(
+    ClipEditorFrameSelected event,
+    Emitter<ClipEditorState> emit,
+  ) {
+    final clips = state.clips;
+    if (!isStopMotionComposition(clips)) return;
+    final frames = clips.first.stopMotionFrames;
+    if (frames == null ||
+        event.frameIndex < 0 ||
+        event.frameIndex >= frames.length) {
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        currentClipIndex: 0,
+        isEditing: true,
+        selectedFrameIndex: event.frameIndex,
       ),
     );
   }
@@ -461,7 +499,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       name: 'ClipEditorBloc',
       category: LogCategory.video,
     );
-    emit(state.copyWith(isEditing: false));
+    emit(state.copyWith(isEditing: false, clearSelectedFrameIndex: true));
   }
 
   void _onEditingToggled(

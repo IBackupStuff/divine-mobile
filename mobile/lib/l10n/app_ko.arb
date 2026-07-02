@@ -3710,5 +3710,13 @@
     "subtitleEditorSaveSuccess": "자막을 업데이트했어요",
     "subtitleEditorSaveError": "자막을 저장하지 못했어요. 다시 시도해주세요.",
     "subtitleEditorRetry": "다시 시도",
-    "subtitleEditorCueHint": "자막 텍스트"
+    "subtitleEditorCueHint": "자막 텍스트",
+    "videoEditorStopMotionFramesPerImageLabel": "이미지당 프레임",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "이미지당 {count}프레임",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "이미지당 프레임 늘리기",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "이미지당 프레임 줄이기",
+    "videoEditorStopMotionFrameSemanticLabel": "스톱모션 프레임 {total}개 중 {position}개",
+    "videoEditorStopMotionFramesCount": "{count, plural, other{{count}프레임}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "프레임",
+    "libraryStopMotionClipLabel": "스톱모션 클립"
 }

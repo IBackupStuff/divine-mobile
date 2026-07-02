@@ -6,18 +6,28 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 
 void main() {
   group(StopMotionClipFrame, () {
-    test('JSON round-trips the basename and duration', () {
+    test('JSON round-trips the basename and duration exactly', () {
+      // 2 frames @ 24fps — not a whole number of milliseconds; a millisecond
+      // round-trip would shift the hold off the output frame grid.
       const frame = StopMotionClipFrame(
         path: '/some/dir/frame_1.jpg',
-        duration: Duration(milliseconds: 83),
+        duration: Duration(microseconds: 83333),
       );
 
       final json = frame.toJson();
       expect(json['path'], 'frame_1.jpg');
-      expect(json['durationMs'], 83);
+      expect(json['durationUs'], 83333);
 
       final restored = StopMotionClipFrame.fromJson(json, '/docs');
       expect(restored.path, '/docs/frame_1.jpg');
+      expect(restored.duration, const Duration(microseconds: 83333));
+    });
+
+    test('falls back to legacy durationMs when durationUs is absent', () {
+      final restored = StopMotionClipFrame.fromJson(
+        const {'path': 'frame_1.jpg', 'durationMs': 83},
+        '/docs',
+      );
       expect(restored.duration, const Duration(milliseconds: 83));
     });
 

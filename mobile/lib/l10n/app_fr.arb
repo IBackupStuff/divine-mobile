@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Sous-titres mis à jour",
     "subtitleEditorSaveError": "Impossible d'enregistrer les sous-titres. Réessaie.",
     "subtitleEditorRetry": "Réessayer",
-    "subtitleEditorCueHint": "Texte du sous-titre"
+    "subtitleEditorCueHint": "Texte du sous-titre",
+    "videoEditorStopMotionFramesPerImageLabel": "Images par photo",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} images par photo",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Augmenter les images par photo",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Réduire les images par photo",
+    "videoEditorStopMotionFrameSemanticLabel": "Image stop-motion {position} sur {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 image} other{{count} images}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Images",
+    "libraryStopMotionClipLabel": "Clip stop-motion"
 }

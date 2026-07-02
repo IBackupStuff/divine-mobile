@@ -2962,5 +2962,13 @@
     "subtitleEditorSaveSuccess": "Na-update ang subtitles",
     "subtitleEditorSaveError": "Hindi ma-save ang subtitles. Subukan ulit.",
     "subtitleEditorRetry": "Subukan ulit",
-    "subtitleEditorCueHint": "Text ng caption"
+    "subtitleEditorCueHint": "Text ng caption",
+    "videoEditorStopMotionFramesPerImageLabel": "Mga frame kada larawan",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} na frame kada larawan",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Dagdagan ang mga frame kada larawan",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Bawasan ang mga frame kada larawan",
+    "videoEditorStopMotionFrameSemanticLabel": "Stop-motion frame {position} ng {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, other{{count} frame}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Mga frame",
+    "libraryStopMotionClipLabel": "Stop-motion na clip"
 }

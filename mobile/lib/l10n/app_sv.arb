@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Undertexter uppdaterade",
     "subtitleEditorSaveError": "Kunde inte spara undertexter. Försök igen.",
     "subtitleEditorRetry": "Försök igen",
-    "subtitleEditorCueHint": "Textningstext"
+    "subtitleEditorCueHint": "Textningstext",
+    "videoEditorStopMotionFramesPerImageLabel": "Bildrutor per bild",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} bildrutor per bild",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Öka bildrutor per bild",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Minska bildrutor per bild",
+    "videoEditorStopMotionFrameSemanticLabel": "Stop motion-bild {position} av {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 bildruta} other{{count} bildrutor}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Bildrutor",
+    "libraryStopMotionClipLabel": "Stop motion-klipp"
 }

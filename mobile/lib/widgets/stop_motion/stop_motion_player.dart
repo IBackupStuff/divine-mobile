@@ -14,12 +14,22 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 /// player. Rendering the frames directly avoids the stutter/oscillation a
 /// looping video player exhibits on ultra-short (≈83ms) clips.
 ///
-/// Honors the platform reduce-motion setting: when animations are disabled it
-/// holds the first frame statically.
+/// Two modes:
+///
+/// * **Autonomous** ([position] is `null`): runs its own [Ticker] and loops
+///   continuously. Honors the platform reduce-motion setting — when animations
+///   are disabled it holds the first frame statically. Used by standalone
+///   previews (metadata / clip preview) that have no external timeline.
+/// * **Controlled** ([position] is non-null): renders the frame at the supplied
+///   composition [position] and never runs its own clock. The caller (the video
+///   editor) drives the frame from its play/pause + timeline state, so playback
+///   respects the playhead instead of free-running.
 class StopMotionPlayer extends StatefulWidget {
   const StopMotionPlayer({
     required this.frames,
     this.fit = BoxFit.cover,
+    this.position,
+    this.cacheHeight,
     super.key,
   });
 
@@ -28,6 +38,18 @@ class StopMotionPlayer extends StatefulWidget {
 
   /// How each frame is inscribed into the player's box.
   final BoxFit fit;
+
+  /// When non-null, the player is *controlled*: it renders the frame at this
+  /// composition position (looping past the sequence length) and does not run
+  /// its own ticker. When `null` the player self-drives a continuous loop.
+  final Duration? position;
+
+  /// Optional decode height (physical pixels) for the stills. Captured frames
+  /// are full camera resolution (multiple MB each decoded); decoding a whole
+  /// sequence at that size thrashes the image cache and stutters playback.
+  /// Callers displaying the player at a known size pass the target height so
+  /// precache and display share one bounded decode.
+  final int? cacheHeight;
 
   @override
   State<StopMotionPlayer> createState() => _StopMotionPlayerState();
@@ -43,6 +65,8 @@ class _StopMotionPlayerState extends State<StopMotionPlayer>
   late List<int> _cumulativeEndUs;
   late int _totalUs;
   bool _precached = false;
+
+  bool get _isControlled => widget.position != null;
 
   @override
   void initState() {
@@ -65,6 +89,9 @@ class _StopMotionPlayerState extends State<StopMotionPlayer>
       _frameIndex.value = 0;
       _precached = false;
       _precacheFrames();
+    }
+    if (oldWidget.frames != widget.frames ||
+        oldWidget.position != widget.position) {
       _syncTicker();
     }
   }
@@ -81,14 +108,26 @@ class _StopMotionPlayerState extends State<StopMotionPlayer>
     if (_precached) return;
     _precached = true;
     for (final frame in widget.frames) {
-      precacheImage(FileImage(File(frame.path)), context);
+      precacheImage(
+        ResizeImage.resizeIfNeeded(
+          null,
+          widget.cacheHeight,
+          FileImage(File(frame.path)),
+        ),
+        context,
+      );
     }
   }
 
   void _syncTicker() {
+    // Controlled mode renders the frame for the external position; the caller
+    // owns the clock, so the internal ticker must stay off.
     final reduceMotion = MediaQuery.of(context).disableAnimations;
     final shouldAnimate =
-        !reduceMotion && widget.frames.length > 1 && _totalUs > 0;
+        !_isControlled &&
+        !reduceMotion &&
+        widget.frames.length > 1 &&
+        _totalUs > 0;
 
     if (shouldAnimate && _ticker == null) {
       _ticker = createTicker(_onTick)..start();
@@ -100,13 +139,21 @@ class _StopMotionPlayerState extends State<StopMotionPlayer>
   }
 
   void _onTick(Duration elapsed) {
-    final t = elapsed.inMicroseconds % _totalUs;
+    final index = _frameIndexForMicros(elapsed.inMicroseconds);
+    if (index != _frameIndex.value) _frameIndex.value = index;
+  }
+
+  /// Maps an absolute microsecond offset (looping past [_totalUs]) to the index
+  /// of the frame that is showing at that time.
+  int _frameIndexForMicros(int micros) {
+    if (_totalUs <= 0) return 0;
+    final t = micros % _totalUs;
     var index = 0;
     while (index < _cumulativeEndUs.length - 1 &&
         t >= _cumulativeEndUs[index]) {
       index++;
     }
-    if (index != _frameIndex.value) _frameIndex.value = index;
+    return index;
   }
 
   @override
@@ -120,13 +167,44 @@ class _StopMotionPlayerState extends State<StopMotionPlayer>
   Widget build(BuildContext context) {
     if (widget.frames.isEmpty) return const SizedBox.shrink();
 
+    final position = widget.position;
+    if (position != null) {
+      return _StopMotionFrame(
+        frame: widget.frames[_frameIndexForMicros(position.inMicroseconds)],
+        fit: widget.fit,
+        cacheHeight: widget.cacheHeight,
+      );
+    }
+
     return ValueListenableBuilder<int>(
       valueListenable: _frameIndex,
-      builder: (context, index, _) => Image.file(
-        File(widget.frames[index].path),
+      builder: (context, index, _) => _StopMotionFrame(
+        frame: widget.frames[index],
         fit: widget.fit,
-        gaplessPlayback: true,
+        cacheHeight: widget.cacheHeight,
       ),
+    );
+  }
+}
+
+class _StopMotionFrame extends StatelessWidget {
+  const _StopMotionFrame({
+    required this.frame,
+    required this.fit,
+    this.cacheHeight,
+  });
+
+  final StopMotionClipFrame frame;
+  final BoxFit fit;
+  final int? cacheHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.file(
+      File(frame.path),
+      fit: fit,
+      gaplessPlayback: true,
+      cacheHeight: cacheHeight,
     );
   }
 }

@@ -106,8 +106,14 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
                     /// Thumbnail or placeholder
                     _Thumbnail(clip: widget.clip),
 
-                    /// Duration badge - bottom left
-                    if (widget.showDurationBadge)
+                    /// Stop-motion marker - top left
+                    if (widget.clip.isStopMotion) const _StopMotionBadge(),
+
+                    /// Duration badge - bottom left. Hidden for stop-motion
+                    /// recordings: their playback length (frame count / 12fps)
+                    /// is a tiny, misleading value, so they read as a still
+                    /// image marked only by the stop-motion badge.
+                    if (widget.showDurationBadge && !widget.clip.isStopMotion)
                       _DurationBadge(clip: widget.clip),
 
                     if (widget.clip.libraryTitle case final title?)
@@ -173,7 +179,17 @@ class _ThumbnailState extends State<_Thumbnail> {
     if (_thumbnailExists && widget.clip.thumbnailPath != null) {
       return Hero(
         tag: 'Video-Clip-Preview-${widget.clip.id}',
-        child: Image.file(File(widget.clip.thumbnailPath!), fit: .cover),
+        // Stop-motion clips use a full-resolution still as their thumbnail;
+        // bound the decode to the grid cell so it doesn't cost tens of MB.
+        child: Image.file(
+          File(widget.clip.thumbnailPath!),
+          fit: .cover,
+          cacheHeight:
+              (MediaQuery.sizeOf(context).width *
+                      MediaQuery.devicePixelRatioOf(context) /
+                      2)
+                  .round(),
+        ),
       );
     }
 
@@ -209,6 +225,34 @@ class _TitleBadge extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: VineTheme.labelSmallFont(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Marks a clip in the library as a stop-motion recording (top-left corner).
+class _StopMotionBadge extends StatelessWidget {
+  const _StopMotionBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return PositionedDirectional(
+      start: 6,
+      top: 6,
+      child: Semantics(
+        label: context.l10n.libraryStopMotionClipLabel,
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: VineTheme.scrim65,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const DivineIcon(
+            icon: .imagesSquare,
+            color: VineTheme.lightText,
+            size: 14,
           ),
         ),
       ),

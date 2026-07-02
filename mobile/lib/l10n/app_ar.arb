@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "تم تحديث الترجمات",
     "subtitleEditorSaveError": "تعذّر حفظ الترجمات. حاول مرّة أخرى.",
     "subtitleEditorRetry": "إعادة المحاولة",
-    "subtitleEditorCueHint": "نص الترجمة"
+    "subtitleEditorCueHint": "نص الترجمة",
+    "videoEditorStopMotionFramesPerImageLabel": "الإطارات لكل صورة",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} إطارات لكل صورة",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "زيادة الإطارات لكل صورة",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "تقليل الإطارات لكل صورة",
+    "videoEditorStopMotionFrameSemanticLabel": "إطار الحركة الإيقافية {position} من {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, one{إطار واحد} two{إطاران} few{{count} إطارات} other{{count} إطار}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "إطارات",
+    "libraryStopMotionClipLabel": "مقطع الحركة الإيقافية"
 }

@@ -70,6 +70,18 @@ class ClipEditorClipSelected extends ClipEditorEvent {
   List<Object?> get props => [index];
 }
 
+/// Selects the still at [frameIndex] in a frames-only stop-motion clip, opening
+/// the per-frame action bar. Enters editing mode on the (single) stop-motion
+/// clip. Ignored when the composition is not stop-motion.
+class ClipEditorFrameSelected extends ClipEditorEvent {
+  const ClipEditorFrameSelected(this.frameIndex);
+
+  final int frameIndex;
+
+  @override
+  List<Object?> get props => [frameIndex];
+}
+
 // === MULTI-SELECT ===
 
 /// Enter multi-select mode, optionally pre-selecting [initialClipId].

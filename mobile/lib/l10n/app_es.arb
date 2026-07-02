@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Subtítulos actualizados",
     "subtitleEditorSaveError": "No se pudieron guardar los subtítulos. Intentá de nuevo.",
     "subtitleEditorRetry": "Reintentar",
-    "subtitleEditorCueHint": "Texto del subtítulo"
+    "subtitleEditorCueHint": "Texto del subtítulo",
+    "videoEditorStopMotionFramesPerImageLabel": "Fotogramas por imagen",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} fotogramas por imagen",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Aumentar fotogramas por imagen",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Reducir fotogramas por imagen",
+    "videoEditorStopMotionFrameSemanticLabel": "Fotograma de stop motion {position} de {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 fotograma} other{{count} fotogramas}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Fotogramas",
+    "libraryStopMotionClipLabel": "Clip de stop motion"
 }

@@ -8295,6 +8295,46 @@ class AppLocalizationsPl extends AppLocalizations {
       'Usuń wybrany element';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => 'Klatki na obraz';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klatki',
+      many: '$count klatek',
+      few: '$count klatki',
+      one: '1 klatka',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'Klatki';
+
+  @override
+  String get libraryStopMotionClipLabel => 'Klip poklatkowy';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '$count klatek na obraz';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'Zwiększ liczbę klatek na obraz';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'Zmniejsz liczbę klatek na obraz';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'Klatka poklatkowa $position z $total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'Edytuj';
 
   @override

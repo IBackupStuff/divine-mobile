@@ -24,6 +24,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/repositories/sticker_repository.dart';
@@ -354,7 +355,22 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       );
 
       final clipManager = ref.read(clipManagerProvider.notifier);
-      clipManager.addMultipleClips(newClips);
+      // Drop unreadable stills, then collapse stop-motion sets added to a
+      // stop-motion session into the session's single frames clip — the
+      // frame-first editor edits exactly one frames list (see
+      // StopMotionFrameOps.mergeClips).
+      final usableClips = [
+        for (final clip in newClips) ?StopMotionFrameOps.sanitizedClip(clip),
+      ];
+      final merged = StopMotionFrameOps.mergeClips([
+        ...ref.read(clipManagerProvider).clips,
+        ...usableClips,
+      ]);
+      if (merged != null) {
+        clipManager.replaceClips([merged]);
+      } else {
+        clipManager.addMultipleClips(usableClips);
+      }
 
       _syncClipsToEditor(clipEditorBloc: clipEditorBloc);
     }

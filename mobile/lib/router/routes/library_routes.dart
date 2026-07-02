@@ -2,6 +2,7 @@
 // ABOUTME: Split from app_router.dart (#4508)
 
 import 'package:go_router/go_router.dart';
+import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/screens/library_screen.dart';
 
 List<RouteBase> libraryRoutes() {
@@ -19,8 +20,14 @@ List<RouteBase> libraryRoutes() {
     GoRoute(
       path: LibraryScreen.clipsOnlyPath,
       name: LibraryScreen.clipsOnlyRouteName,
-      builder: (_, _) =>
-          const LibraryScreen(tabsMode: LibraryTabsMode.clipsOnly),
+      // `type` scopes the clips to the recorder's mode (stop-motion vs normal);
+      // absent → both types (the standalone default).
+      builder: (_, state) => LibraryScreen(
+        tabsMode: LibraryTabsMode.clipsOnly,
+        clipTypeFilter: LibraryClipTypeFilter.fromQuery(
+          state.uri.queryParameters['type'],
+        ),
+      ),
     ),
     GoRoute(
       path: LibraryScreen.soundsPath,

@@ -48,6 +48,18 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
     return column.equals(ownerPubkey) | column.isNull();
   }
 
+  /// Whether a clip is a *library* clip: it has no draft association, or (when
+  /// [includeAutosaveDraftId] is given) it belongs to the throwaway autosave /
+  /// recording-scratch draft. Clips saved into a named project are excluded.
+  Expression<bool> _isLibraryClip(
+    GeneratedColumn<String> draftIdColumn,
+    String? includeAutosaveDraftId,
+  ) {
+    if (includeAutosaveDraftId == null) return draftIdColumn.isNull();
+    return draftIdColumn.isNull() |
+        draftIdColumn.equals(includeAutosaveDraftId);
+  }
+
   /// Get all clips for a draft. Excludes trashed clips.
   Future<List<ClipRow>> getClipsByDraftId(String draftId) {
     final query = select(clips)
@@ -124,15 +136,22 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
 
   // -- Library clip methods (draftId IS NULL) --
 
-  /// Get all library clips (no draft association), newest first.
-  /// Excludes trashed clips. When [ownerPubkey] is provided, returns
-  /// only clips owned by that account **plus** legacy clips with no
-  /// owner.
-  Future<List<ClipRow>> getLibraryClips({int? limit, String? ownerPubkey}) {
+  /// Get all library clips, newest first. Excludes trashed clips. When
+  /// [ownerPubkey] is provided, returns only clips owned by that account
+  /// **plus** legacy clips with no owner.
+  ///
+  /// Clips in a named draft are excluded; when [includeAutosaveDraftId] is
+  /// given, clips in that throwaway autosave draft are included so a
+  /// just-recorded clip stays visible while the editor holds it in autosave.
+  Future<List<ClipRow>> getLibraryClips({
+    int? limit,
+    String? ownerPubkey,
+    String? includeAutosaveDraftId,
+  }) {
     final query = select(clips)
       ..where(
         (t) =>
-            t.draftId.isNull() &
+            _isLibraryClip(t.draftId, includeAutosaveDraftId) &
             _ownedOrLegacy(t.ownerPubkey, ownerPubkey) &
             t.deletedAt.isNull(),
       )
@@ -148,11 +167,14 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   /// Watch all library clips (reactive stream). Excludes trashed clips.
   /// When [ownerPubkey] is provided, returns only clips owned by that
   /// account **plus** legacy clips with no owner.
-  Stream<List<ClipRow>> watchLibraryClips({String? ownerPubkey}) {
+  Stream<List<ClipRow>> watchLibraryClips({
+    String? ownerPubkey,
+    String? includeAutosaveDraftId,
+  }) {
     final query = select(clips)
       ..where(
         (t) =>
-            t.draftId.isNull() &
+            _isLibraryClip(t.draftId, includeAutosaveDraftId) &
             _ownedOrLegacy(t.ownerPubkey, ownerPubkey) &
             t.deletedAt.isNull(),
       )

@@ -14,6 +14,7 @@ class VideoEditorPlayer extends StatelessWidget {
     required this.bodySize,
     required this.renderSize,
     this.stopMotionFrames,
+    this.stopMotionPosition,
     super.key,
   });
 
@@ -27,6 +28,11 @@ class VideoEditorPlayer extends StatelessWidget {
   /// plays the frame sequence via [StopMotionPlayer] instead of a video — the
   /// clip has no mp4 (it is rendered only at publish).
   final List<StopMotionClipFrame>? stopMotionFrames;
+
+  /// Current editor-timeline position, forwarded to the controlled
+  /// [StopMotionPlayer] so the shown frame follows play/pause and scrubbing
+  /// instead of free-running. Only meaningful when [stopMotionFrames] is set.
+  final Duration? stopMotionPosition;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +48,13 @@ class VideoEditorPlayer extends StatelessWidget {
       child: AspectRatio(
         aspectRatio: aspectRatio,
         child: frames != null
-            ? StopMotionPlayer(frames: frames)
+            ? StopMotionPlayer(
+                frames: frames,
+                position: stopMotionPosition,
+                cacheHeight:
+                    (renderSize.height * MediaQuery.devicePixelRatioOf(context))
+                        .round(),
+              )
             : DivineVideoPlayer(
                 controller: controller,
                 placeholder: VideoEditorThumbnail(contentSize: renderSize),

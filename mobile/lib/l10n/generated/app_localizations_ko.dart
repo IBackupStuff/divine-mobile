@@ -7821,6 +7821,43 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorDeleteSelectedItemSemanticLabel => '선택한 항목 삭제';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => '이미지당 프레임';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count프레임',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => '프레임';
+
+  @override
+  String get libraryStopMotionClipLabel => '스톱모션 클립';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '이미지당 $count프레임';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      '이미지당 프레임 늘리기';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      '이미지당 프레임 줄이기';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return '스톱모션 프레임 $total개 중 $position개';
+  }
+
+  @override
   String get videoEditorEditLabel => '편집';
 
   @override

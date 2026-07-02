@@ -672,6 +672,57 @@ void main() {
         expect(libraryClips[1].id, equals('lib_clip_1'));
       });
 
+      test(
+        'getLibraryClips includes the autosave draft when requested',
+        () async {
+          await dao.upsertClip(
+            id: 'lib_clip',
+            orderIndex: 0,
+            durationMs: 3000,
+            recordedAt: DateTime(2023, 11, 14, 10),
+            filePath: 'test.mp4',
+            thumbnailPath: 'thumbnail.jpeg',
+            data: '{}',
+          );
+          await dao.upsertClip(
+            id: 'autosave_clip',
+            draftId: 'draft_autosave',
+            orderIndex: 0,
+            durationMs: 4000,
+            recordedAt: DateTime(2023, 11, 14, 12),
+            filePath: 'test.mp4',
+            thumbnailPath: 'thumbnail.jpeg',
+            data: '{}',
+          );
+          await dao.upsertClip(
+            id: 'named_draft_clip',
+            draftId: 'draft_real',
+            orderIndex: 0,
+            durationMs: 5000,
+            recordedAt: DateTime(2023, 11, 14, 11),
+            filePath: 'test.mp4',
+            thumbnailPath: 'thumbnail.jpeg',
+            data: '{}',
+          );
+
+          // Default: only draftId IS NULL.
+          expect(
+            (await dao.getLibraryClips()).map((c) => c.id),
+            equals(['lib_clip']),
+          );
+
+          // With the autosave draft included: loose + autosave clips, but
+          // not the named-project clip.
+          final withAutosave = await dao.getLibraryClips(
+            includeAutosaveDraftId: 'draft_autosave',
+          );
+          expect(
+            withAutosave.map((c) => c.id),
+            equals(['autosave_clip', 'lib_clip']),
+          );
+        },
+      );
+
       test('getLibraryClips respects limit', () async {
         await dao.upsertClip(
           id: 'lib_1',

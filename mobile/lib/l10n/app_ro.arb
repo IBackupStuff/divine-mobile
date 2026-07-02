@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Subtitrări actualizate",
     "subtitleEditorSaveError": "Nu am putut salva subtitrările. Încearcă din nou.",
     "subtitleEditorRetry": "Reîncearcă",
-    "subtitleEditorCueHint": "Text de subtitrare"
+    "subtitleEditorCueHint": "Text de subtitrare",
+    "videoEditorStopMotionFramesPerImageLabel": "Cadre pe imagine",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} cadre pe imagine",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Mărește cadrele pe imagine",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Micșorează cadrele pe imagine",
+    "videoEditorStopMotionFrameSemanticLabel": "Cadru stop-motion {position} din {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 cadru} other{{count} cadre}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Cadre",
+    "libraryStopMotionClipLabel": "Clip stop-motion"
 }

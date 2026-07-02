@@ -4386,5 +4386,13 @@
     "subtitleEditorSaveSuccess": "Legendas atualizadas",
     "subtitleEditorSaveError": "Não foi possível salvar as legendas. Tente novamente.",
     "subtitleEditorRetry": "Tentar novamente",
-    "subtitleEditorCueHint": "Texto da legenda"
+    "subtitleEditorCueHint": "Texto da legenda",
+    "videoEditorStopMotionFramesPerImageLabel": "Quadros por imagem",
+    "videoEditorStopMotionFramesPerImageValueSemanticLabel": "{count} quadros por imagem",
+    "videoEditorStopMotionIncreaseFramesPerImageSemanticLabel": "Aumentar quadros por imagem",
+    "videoEditorStopMotionDecreaseFramesPerImageSemanticLabel": "Reduzir quadros por imagem",
+    "videoEditorStopMotionFrameSemanticLabel": "Quadro de stop motion {position} de {total}",
+    "videoEditorStopMotionFramesCount": "{count, plural, =1{1 quadro} other{{count} quadros}}",
+    "videoEditorStopMotionFramesPerImageButtonLabel": "Quadros",
+    "libraryStopMotionClipLabel": "Clipe de stop motion"
 }

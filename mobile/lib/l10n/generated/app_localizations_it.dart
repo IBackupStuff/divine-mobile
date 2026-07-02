@@ -8201,6 +8201,45 @@ class AppLocalizationsIt extends AppLocalizations {
       'Elimina elemento selezionato';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel =>
+      'Fotogrammi per immagine';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotogrammi',
+      one: '1 fotogramma',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'Fotogrammi';
+
+  @override
+  String get libraryStopMotionClipLabel => 'Clip stop-motion';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '$count fotogrammi per immagine';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'Aumenta fotogrammi per immagine';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'Riduci fotogrammi per immagine';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'Fotogramma stop-motion $position di $total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'Modifica';
 
   @override

@@ -8200,6 +8200,44 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изтриване на избрания елемент';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => 'Кадри на изображение';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count кадъра',
+      one: '1 кадър',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'Кадри';
+
+  @override
+  String get libraryStopMotionClipLabel => 'Стоп-моушън клип';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '$count кадъра на изображение';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'Увеличаване на кадрите на изображение';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'Намаляване на кадрите на изображение';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'Стоп-моушън кадър $position от $total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'Редактиране';
 
   @override

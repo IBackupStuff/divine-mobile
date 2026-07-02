@@ -8071,6 +8071,46 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorDeleteSelectedItemSemanticLabel => 'حذف العنصر المحدد';
 
   @override
+  String get videoEditorStopMotionFramesPerImageLabel => 'الإطارات لكل صورة';
+
+  @override
+  String videoEditorStopMotionFramesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count إطار',
+      few: '$count إطارات',
+      two: 'إطاران',
+      one: 'إطار واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorStopMotionFramesPerImageButtonLabel => 'إطارات';
+
+  @override
+  String get libraryStopMotionClipLabel => 'مقطع الحركة الإيقافية';
+
+  @override
+  String videoEditorStopMotionFramesPerImageValueSemanticLabel(int count) {
+    return '$count إطارات لكل صورة';
+  }
+
+  @override
+  String get videoEditorStopMotionIncreaseFramesPerImageSemanticLabel =>
+      'زيادة الإطارات لكل صورة';
+
+  @override
+  String get videoEditorStopMotionDecreaseFramesPerImageSemanticLabel =>
+      'تقليل الإطارات لكل صورة';
+
+  @override
+  String videoEditorStopMotionFrameSemanticLabel(int position, int total) {
+    return 'إطار الحركة الإيقافية $position من $total';
+  }
+
+  @override
   String get videoEditorEditLabel => 'تحرير';
 
   @override
