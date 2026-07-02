@@ -248,9 +248,24 @@ class _VideoEditorStopMotionFrameStripState
     if (from != to) widget.onReorder(from, to);
   }
 
+  /// Unique per-tile keys. Duplicated stills share a file path, so keying by
+  /// path alone collides (Flutter requires unique sibling keys). Disambiguate
+  /// by occurrence — duplicates are identical images, so the exact key→tile
+  /// mapping among them is visually indistinguishable during reorder.
+  List<Key> _tileKeys() {
+    final seen = <String, int>{};
+    return [
+      for (final frame in _orderedFrames)
+        ValueKey(
+          '${frame.path}#${seen[frame.path] = (seen[frame.path] ?? 0) + 1}',
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final layout = _computeLayout();
+    final tileKeys = _tileKeys();
 
     return GestureDetector(
       onLongPressStart: _onLongPressStart,
@@ -266,7 +281,7 @@ class _VideoEditorStopMotionFrameStripState
             for (var i = 0; i < _orderedFrames.length; i++)
               if (i != _dragIndex)
                 AnimatedPositioned(
-                  key: ValueKey(_orderedFrames[i].path),
+                  key: tileKeys[i],
                   duration: _isReordering ? _animDuration : Duration.zero,
                   curve: Curves.easeInOut,
                   left: layout.offsets[i],

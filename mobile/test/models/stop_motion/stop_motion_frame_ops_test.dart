@@ -76,6 +76,85 @@ void main() {
     });
   });
 
+  group('insertIndexAtPosition', () {
+    final frames = framesOf([1, 1, 1]); // three 1/24s stills
+
+    test('prepends at (or before) the start', () {
+      expect(
+        StopMotionFrameOps.insertIndexAtPosition(frames, Duration.zero),
+        0,
+      );
+      expect(
+        StopMotionFrameOps.insertIndexAtPosition(
+          frames,
+          const Duration(seconds: -1),
+        ),
+        0,
+      );
+    });
+
+    test('inserts after the still under the playhead', () {
+      // Inside frame 0 → after it.
+      expect(
+        StopMotionFrameOps.insertIndexAtPosition(frames, hold(1) ~/ 2),
+        1,
+      );
+      // Inside frame 1 → after it.
+      expect(
+        StopMotionFrameOps.insertIndexAtPosition(
+          frames,
+          hold(1) + hold(1) ~/ 2,
+        ),
+        2,
+      );
+    });
+
+    test('appends at or past the end', () {
+      expect(
+        StopMotionFrameOps.insertIndexAtPosition(frames, hold(3)),
+        3,
+      );
+      expect(
+        StopMotionFrameOps.insertIndexAtPosition(frames, hold(10)),
+        3,
+      );
+    });
+  });
+
+  group('insertFramesAt', () {
+    test('splices frames in at the index', () {
+      final result = StopMotionFrameOps.insertFramesAt(
+        framesOf([1, 1]),
+        1,
+        framesOf([2, 2]),
+      );
+      expect(result.map((f) => f.path), [
+        'f0.jpg',
+        'f0.jpg',
+        'f1.jpg',
+        'f1.jpg',
+      ]);
+    });
+
+    test('clamps an out-of-range index to the end', () {
+      final result = StopMotionFrameOps.insertFramesAt(
+        framesOf([1, 1]),
+        99,
+        framesOf([2]),
+      );
+      expect(result, hasLength(3));
+      expect(result.last.duration, hold(2));
+    });
+
+    test('returns the list unchanged for an empty insert', () {
+      final frames = framesOf([1, 1]);
+      expect(
+        StopMotionFrameOps.insertFramesAt(frames, 1, const []),
+        same(frames),
+      );
+    });
+  });
+
   group('setFrameHold / setGlobalHold', () {
     test('sets only the targeted frame hold and marks it overridden', () {
       final result = StopMotionFrameOps.setFrameHold(framesOf([1, 1, 1]), 1, 4);

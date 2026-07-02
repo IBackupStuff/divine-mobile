@@ -54,6 +54,38 @@ abstract class StopMotionFrameOps {
   static Duration totalDuration(List<StopMotionClipFrame> frames) =>
       frames.fold(Duration.zero, (sum, frame) => sum + frame.duration);
 
+  /// Index at which stills captured with the playhead at [position] should be
+  /// inserted into [frames], so they land at that timeline position rather than
+  /// at the end.
+  ///
+  /// The playhead sitting inside frame *i*'s hold inserts the new stills right
+  /// after frame *i*. Clamped to `0..frames.length`, so a playhead at the start
+  /// prepends and one at/after the end appends.
+  static int insertIndexAtPosition(
+    List<StopMotionClipFrame> frames,
+    Duration position,
+  ) {
+    if (position <= Duration.zero) return 0;
+    var acc = Duration.zero;
+    for (var i = 0; i < frames.length; i++) {
+      acc += frames[i].duration;
+      if (position < acc) return i + 1;
+    }
+    return frames.length;
+  }
+
+  /// [frames] with [inserted] spliced in at [index] (clamped to the list
+  /// bounds).
+  static List<StopMotionClipFrame> insertFramesAt(
+    List<StopMotionClipFrame> frames,
+    int index,
+    List<StopMotionClipFrame> inserted,
+  ) {
+    if (inserted.isEmpty) return frames;
+    final at = index.clamp(0, frames.length);
+    return [...frames.sublist(0, at), ...inserted, ...frames.sublist(at)];
+  }
+
   /// [frames] with the still at [index] removed.
   ///
   /// Returns the list unchanged when [index] is out of range or removing it

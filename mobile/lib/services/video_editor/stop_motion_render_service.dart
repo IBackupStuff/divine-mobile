@@ -77,8 +77,9 @@ class StopMotionRenderService {
   /// save) can surface a failure instead of proceeding with a clip that has no
   /// playable video.
   static Future<DivineVideoClip?> materialize(DivineVideoClip clip) async {
-    // Already has a rendered video (stop-motion clips are rendered at capture);
-    // nothing to do. Frames-only clips (no video) are rendered on demand.
+    // A normal video clip (or a stop-motion clip already materialized once)
+    // has its mp4; nothing to do. A frames-only clip (no video) is rendered on
+    // demand below.
     if (clip.video != null) return clip;
 
     final frames = clip.stopMotionFrames;

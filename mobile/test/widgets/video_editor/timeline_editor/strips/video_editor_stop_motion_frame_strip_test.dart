@@ -64,6 +64,18 @@ void main() {
     expect(find.byType(Image), findsNWidgets(3));
   });
 
+  testWidgets('renders duplicated stills without a key collision', (
+    tester,
+  ) async {
+    // Duplicating a still reuses its file path; sibling tile keys must stay
+    // unique or the Stack throws "duplicate keys found".
+    frames = [...frames, frames[1]];
+    await pump(tester, onFrameTapped: (_) {});
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(Image), findsNWidgets(4));
+  });
+
   testWidgets('tapping a tile reports its index', (tester) async {
     int? tapped;
     await pump(tester, onFrameTapped: (index) => tapped = index);

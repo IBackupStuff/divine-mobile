@@ -26,6 +26,7 @@ import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/repositories/sticker_repository.dart';
 import 'package:openvine/screens/library_screen.dart';
@@ -287,12 +288,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// clips can be rolled back if the user cancels (`result != true`).
   /// On success or cancel, calls [_syncClipsToEditor] to keep the
   /// [ClipEditorBloc] in sync.
-  Future<void> _openCamera({required ClipEditorBloc clipEditorBloc}) async {
-    final initialIds = ref
-        .read(clipManagerProvider)
-        .clips
-        .map((c) => c.id)
-        .toSet();
+  Future<void> _openCamera({
+    required ClipEditorBloc clipEditorBloc,
+    required Duration playhead,
+  }) async {
+    final initialClips = ref.read(clipManagerProvider).clips;
+    final initialIds = initialClips.map((c) => c.id).toSet();
+    // A stop-motion composition adds the new stills into its single frames clip
+    // at the playhead; a normal composition just keeps the appended clip.
+    final stopMotionTarget = isStopMotionComposition(initialClips)
+        ? initialClips.first
+        : null;
 
     final result = await Navigator.push<bool>(
       context,
@@ -307,19 +313,68 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       ),
     );
 
+    final notifier = ref.read(clipManagerProvider.notifier);
     if (result != true) {
-      final notifier = ref.read(clipManagerProvider.notifier);
-      final newClips = ref
-          .read(clipManagerProvider)
-          .clips
+      final newClips = notifier.clips
           .where((c) => !initialIds.contains(c.id))
           .toList();
       for (final clip in newClips) {
         await notifier.removeClipById(clip.id);
       }
+    } else if (stopMotionTarget != null) {
+      await _insertCapturedStopMotionFrames(
+        target: stopMotionTarget,
+        initialIds: initialIds,
+        playhead: playhead,
+      );
     }
 
     _syncClipsToEditor(clipEditorBloc: clipEditorBloc);
+  }
+
+  /// Splices stills captured over a stop-motion composition into its frames
+  /// clip [target] at the [playhead] position, then drops the throwaway clip
+  /// (and its library row) the recorder created for the capture session.
+  Future<void> _insertCapturedStopMotionFrames({
+    required DivineVideoClip target,
+    required Set<String> initialIds,
+    required Duration playhead,
+  }) async {
+    final notifier = ref.read(clipManagerProvider.notifier);
+    final clips = notifier.clips;
+    final added = clips
+        .where((c) => !initialIds.contains(c.id) && c.isStopMotion)
+        .toList();
+    final newFrames = [
+      for (final clip in added) ...?clip.stopMotionFrames,
+    ];
+    if (newFrames.isEmpty) return;
+
+    final targetFrames = target.stopMotionFrames ?? const [];
+    final index = StopMotionFrameOps.insertIndexAtPosition(
+      targetFrames,
+      playhead,
+    );
+    final merged = StopMotionFrameOps.clipWithFrames(
+      target,
+      StopMotionFrameOps.insertFramesAt(targetFrames, index, newFrames),
+    );
+
+    final addedIds = added.map((c) => c.id).toSet();
+    notifier.replaceClips([
+      for (final clip in clips)
+        if (clip.id == target.id)
+          merged
+        else if (!addedIds.contains(clip.id))
+          clip,
+    ]);
+
+    // The recorder saved each capture session as its own library set; those
+    // stills now live in [target], so drop the throwaway rows (files kept).
+    final libraryService = ref.read(clipLibraryServiceProvider);
+    for (final id in addedIds) {
+      await libraryService.deleteClipRow(id);
+    }
   }
 
   Future<void> _openClipsEditor({
@@ -794,8 +849,13 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               bodySizeNotifier: _bodySizeNotifier,
               zoomMatrixNotifier: _zoomMatrixNotifier,
               fromLibrary: widget.fromLibrary,
-              onOpenCamera: () =>
-                  _openCamera(clipEditorBloc: context.read<ClipEditorBloc>()),
+              onOpenCamera: () => _openCamera(
+                clipEditorBloc: context.read<ClipEditorBloc>(),
+                playhead: context
+                    .read<VideoEditorMainBloc>()
+                    .state
+                    .currentPosition,
+              ),
               onOpenClipsEditor: () {
                 final mainBloc = context.read<VideoEditorMainBloc>();
                 final clipEditorBloc = context.read<ClipEditorBloc>();

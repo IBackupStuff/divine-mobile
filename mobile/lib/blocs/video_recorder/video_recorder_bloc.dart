@@ -295,6 +295,14 @@ class VideoRecorderBloc
     );
     if (!event.fromEditor && savedMode != state.recorderMode) {
       _applyRecorderMode(emit, savedMode, keepAutosavedDraft: true);
+    } else if (event.fromEditor &&
+        state.recorderMode != VideoRecorderMode.stopMotion &&
+        isStopMotionComposition(_readClipManager().clips)) {
+      // Opened over a stop-motion composition to add more stills: switch to the
+      // stills shutter so the "+" camera captures photos, not a video. Set only
+      // the mode field — routing through _applyRecorderMode would clear the clip
+      // manager (the composition being edited).
+      emit(state.copyWith(recorderMode: VideoRecorderMode.stopMotion));
     }
 
     final savedLensString = prefs.getString(_kLastUsedCameraLensKey);

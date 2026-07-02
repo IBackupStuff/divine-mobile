@@ -1783,6 +1783,39 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'switches to stop-motion mode when opened from a stop-motion editor',
+        setUp: () {
+          when(() => clipManager.clips).thenReturn([
+            DivineVideoClip(
+              id: 'clip_sm_1',
+              stopMotionFrames: const [
+                StopMotionClipFrame(
+                  path: '/f0.jpg',
+                  duration: Duration(milliseconds: 42),
+                ),
+              ],
+              duration: const Duration(milliseconds: 42),
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          ]);
+        },
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoRecorderInitializeRequested(fromEditor: true)),
+        verify: (bloc) {
+          expect(bloc.state.recorderMode, VideoRecorderMode.stopMotion);
+          // Setting the mode directly must not clear the composition.
+          verifyNever(
+            () => clipManager.clearAll(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'restores persisted mode when NOT opened from the editor',
         setUp: () {
           when(
