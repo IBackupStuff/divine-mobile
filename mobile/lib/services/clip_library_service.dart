@@ -213,11 +213,22 @@ class ClipLibraryService {
   ///
   /// Returns true if the clip was found and trashed.
   Future<bool> softDelete(String id, {bool clearDraftId = false}) async {
-    final ok = await _clipsDao.softDeleteClip(
+    final now = DateTime.now();
+    final deletedLibraryRow = await _clipsDao.softDeleteClip(
       id: id,
-      deletedAt: DateTime.now(),
+      deletedAt: now,
       clearDraftId: clearDraftId,
     );
+    // A set that has been through the editor also has an autosave-draft copy
+    // (row id `<autoSaveId>:<clipId>`) which the library surfaces via
+    // getLibraryClips(includeAutosaveDraftId:). Trash that row too, or the clip
+    // reappears from it the moment the library reloads after deletion.
+    final deletedAutosaveRow = await _clipsDao.softDeleteClip(
+      id: _autosaveDraftRowId(id),
+      deletedAt: now,
+      clearDraftId: clearDraftId,
+    );
+    final ok = deletedLibraryRow || deletedAutosaveRow;
     if (ok) {
       Log.debug(
         '🗑️ Soft-deleted clip: $id',
@@ -228,12 +239,23 @@ class ClipLibraryService {
     return ok;
   }
 
+  /// Row id of the autosave-draft copy of the clip [clipId], mirroring the
+  /// `<draftId>:<clipId>` scheme [DraftsDao.saveDraftWithClips] writes.
+  String _autosaveDraftRowId(String clipId) =>
+      '${VideoEditorConstants.autoSaveId}:$clipId';
+
   /// Restore a trashed clip. The clip becomes visible to active queries
   /// again with its previous `draft_id` (library if `draft_id` is NULL).
   ///
   /// Returns true if a trashed clip with [id] was restored.
   Future<bool> restore(String id) async {
-    final ok = await _clipsDao.restoreClip(id);
+    final restoredLibraryRow = await _clipsDao.restoreClip(id);
+    // Mirror softDelete: restore the autosave-draft copy too, so an undo brings
+    // the set back exactly as it was.
+    final restoredAutosaveRow = await _clipsDao.restoreClip(
+      _autosaveDraftRowId(id),
+    );
+    final ok = restoredLibraryRow || restoredAutosaveRow;
     if (ok) {
       Log.debug(
         '♻️ Restored clip: $id',

@@ -300,13 +300,27 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
         .write(ClipsCompanion(ownerPubkey: Value(newOwnerPubkey)));
   }
 
-  /// Check if a filename is referenced by any clip's file_path
-  /// or thumbnail_path.
+  /// Check if a filename is referenced by any clip.
+  ///
+  /// Checks the indexed `file_path` / `thumbnail_path` columns, plus a
+  /// substring match against the serialized clip `data`. Stop-motion clips
+  /// keep their still paths only inside `data` (a JSON list of frames); the
+  /// only frame mirrored into an indexed column is the first one, via
+  /// `thumbnail_path`. Without the `data` check every other still would look
+  /// unreferenced and be deleted by `FileCleanupService` while the clip's row
+  /// still points at it — silently shrinking a saved set to a single frame.
+  ///
+  /// The `data` match is JSON-quoted (`"<filename>"`) to align with the stored
+  /// basenames. A basename's `_` is a `LIKE` single-char wildcard, so the match
+  /// can only over-approximate (keep a file a stricter check would delete),
+  /// never under-approximate — the safe direction for a deletion guard.
   Future<bool> isFileReferenced(String filename) async {
     final query = selectOnly(clips)
       ..addColumns([clips.id.count()])
       ..where(
-        clips.filePath.equals(filename) | clips.thumbnailPath.equals(filename),
+        clips.filePath.equals(filename) |
+            clips.thumbnailPath.equals(filename) |
+            clips.data.like('%"$filename"%'),
       );
     final result = await query.getSingle();
     return (result.read(clips.id.count()) ?? 0) > 0;

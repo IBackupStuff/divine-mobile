@@ -941,6 +941,34 @@ void main() {
         final result = await dao.isFileReferenced('something.mp4');
         expect(result, isFalse);
       });
+
+      test(
+        'returns true for a stop-motion still referenced only inside data',
+        () async {
+          // A stop-motion clip keeps its stills in the `data` JSON blob; only
+          // the first frame is mirrored into thumbnail_path. Every other still
+          // must still count as referenced, or file cleanup would delete it.
+          await dao.upsertClip(
+            id: 'sm_clip',
+            orderIndex: 0,
+            durationMs: 2000,
+            recordedAt: DateTime(2023, 11, 14, 10),
+            filePath: null,
+            thumbnailPath: 'sm_frame_0.jpg',
+            data:
+                '{"id":"sm_clip","stopMotionFrames":['
+                '{"path":"sm_frame_0.jpg","durationUs":41667},'
+                '{"path":"sm_frame_1.jpg","durationUs":41667},'
+                '{"path":"sm_frame_2.jpg","durationUs":41667}]}',
+          );
+
+          // The thumbnail (indexed) and a non-thumbnail still (data-only) are
+          // both referenced; an unrelated basename is not.
+          expect(await dao.isFileReferenced('sm_frame_0.jpg'), isTrue);
+          expect(await dao.isFileReferenced('sm_frame_1.jpg'), isTrue);
+          expect(await dao.isFileReferenced('sm_frame_9.jpg'), isFalse);
+        },
+      );
     });
 
     group('ownerPubkey isolation', () {

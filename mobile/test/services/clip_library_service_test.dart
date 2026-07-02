@@ -195,6 +195,58 @@ void main() {
       });
 
       test(
+        'also trashes the autosave-draft copy so the set does not reappear',
+        () async {
+          final draftService = DraftStorageService(
+            draftsDao: database.draftsDao,
+            clipsDao: database.clipsDao,
+          );
+          final clip = DivineVideoClip(
+            id: 'sm_set',
+            stopMotionFrames: const [
+              StopMotionClipFrame(
+                path: '/tmp/f0.jpg',
+                duration: Duration(milliseconds: 167),
+              ),
+            ],
+            thumbnailPath: '/tmp/f0.jpg',
+            duration: const Duration(milliseconds: 167),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+
+          // The two rows a set that went through the editor ends up with:
+          // a library row (recorder) and an autosave-draft row (editor).
+          await service.saveClip(clip);
+          await draftService.saveDraft(
+            DivineVideoDraft.create(
+              id: VideoEditorConstants.autoSaveId,
+              clips: [clip],
+              title: '',
+              description: '',
+              hashtags: const {},
+              selectedApproach: '',
+            ),
+          );
+          expect((await service.getAllClips()).length, 1);
+
+          final trashed = await service.softDelete('sm_set');
+          expect(trashed, isTrue);
+          // Gone for good: the autosave-draft copy is trashed too, so the
+          // library reload can't resurrect it.
+          expect(await service.getAllClips(), isEmpty);
+
+          // Undo restores both rows.
+          await service.restore('sm_set');
+          expect(
+            (await service.getAllClips()).map((c) => c.id),
+            equals(['sm_set']),
+          );
+        },
+      );
+
+      test(
         'getTrashedClips skips a corrupt clip and returns valid ones',
         () async {
           final validClip = DivineVideoClip(
