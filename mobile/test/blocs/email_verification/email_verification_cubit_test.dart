@@ -1629,6 +1629,147 @@ void main() {
           fake.flushMicrotasks();
         });
       });
+
+      test(
+        'stale poll completion after a new attempt does not exchange or cleanup',
+        () {
+          const secondDeviceCode = 'second-device-code-def456';
+          const secondVerifier = 'second-verifier-uvw123';
+          const secondEmail = 'second@example.com';
+
+          when(() => mockAuthService.isRegistered).thenReturn(false);
+          when(() => mockAuthService.isAuthenticated).thenReturn(false);
+          when(() => mockAuthService.isAnonymous).thenReturn(false);
+          when(
+            () => mockOAuth.pollForCode(testDeviceCode),
+          ).thenAnswer((_) async {
+            await Future<void>.delayed(const Duration(seconds: 5));
+            return PollResult.complete(pollCode);
+          });
+          when(
+            () => mockOAuth.pollForCode(secondDeviceCode),
+          ).thenAnswer((_) async => PollResult.pending());
+          when(
+            () => mockOAuth.exchangeCode(
+              code: pollCode,
+              verifier: secondVerifier,
+            ),
+          ).thenAnswer(
+            (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
+          );
+          when(
+            () => mockInviteApiClient.consumeInviteWithSession(
+              code: any(named: 'code'),
+              oauthConfig: any(named: 'oauthConfig'),
+              session: any(named: 'session'),
+            ),
+          ).thenAnswer(
+            (_) async => const InviteConsumeResult(
+              message: 'Welcome',
+              codesAllocated: 5,
+            ),
+          );
+          when(
+            () => mockAuthService.signInWithDivineOAuth(any()),
+          ).thenAnswer((_) async {});
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+              );
+
+            fake.elapse(const Duration(seconds: 3));
+            verify(() => mockOAuth.pollForCode(testDeviceCode)).called(1);
+
+            cubit.startPolling(
+              deviceCode: secondDeviceCode,
+              verifier: secondVerifier,
+              email: secondEmail,
+            );
+
+            fake.elapse(const Duration(seconds: 5));
+            fake.flushMicrotasks();
+
+            expect(cubit.state.status, EmailVerificationStatus.polling);
+            expect(cubit.state.pendingEmail, secondEmail);
+            verifyNever(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+              ),
+            );
+            verifyNever(
+              () => mockOAuth.exchangeCode(
+                code: pollCode,
+                verifier: secondVerifier,
+              ),
+            );
+
+            verify(() => mockOAuth.pollForCode(secondDeviceCode)).called(1);
+
+            cubit.close();
+            fake.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'stale terminal poll error after a new attempt does not emit or cleanup',
+        () {
+          const secondDeviceCode = 'second-device-code-def456';
+          const secondVerifier = 'second-verifier-uvw123';
+          const secondEmail = 'second@example.com';
+
+          when(() => mockAuthService.isRegistered).thenReturn(false);
+          when(() => mockAuthService.isAuthenticated).thenReturn(false);
+          when(
+            () => mockOAuth.pollForCode(testDeviceCode),
+          ).thenAnswer((_) async {
+            await Future<void>.delayed(const Duration(seconds: 5));
+            return PollResult.error(
+              'Invalid or expired verification token',
+              statusCode: 401,
+              failure: KeycastAuthFailure.expiredVerification,
+            );
+          });
+          when(
+            () => mockOAuth.pollForCode(secondDeviceCode),
+          ).thenAnswer((_) async => PollResult.pending());
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+              );
+
+            fake.elapse(const Duration(seconds: 3));
+            verify(() => mockOAuth.pollForCode(testDeviceCode)).called(1);
+
+            cubit.startPolling(
+              deviceCode: secondDeviceCode,
+              verifier: secondVerifier,
+              email: secondEmail,
+            );
+
+            fake.elapse(const Duration(seconds: 5));
+            fake.flushMicrotasks();
+
+            expect(cubit.state.status, EmailVerificationStatus.polling);
+            expect(cubit.state.pendingEmail, secondEmail);
+            expect(cubit.state.errorCode, isNull);
+
+            verify(() => mockOAuth.pollForCode(secondDeviceCode)).called(1);
+
+            cubit.close();
+            fake.flushMicrotasks();
+          });
+        },
+      );
     });
 
     group('resendVerification', () {

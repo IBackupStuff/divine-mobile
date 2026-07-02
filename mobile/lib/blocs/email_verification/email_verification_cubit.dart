@@ -87,6 +87,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   String? _pendingInviteCode;
   String? _pendingVerificationToken;
   bool _isVerifyingEmailToken = false;
+  int _verificationGeneration = 0;
 
   /// True once a terminal completion has been claimed for the current
   /// verification. Set synchronously at the top of [_exchangeCodeAndLogin]
@@ -166,6 +167,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       category: LogCategory.auth,
     );
 
+    _verificationGeneration++;
     _pendingDeviceCode = deviceCode;
     _pendingVerifier = verifier;
     _pendingInviteCode = inviteCode == null
@@ -196,6 +198,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   }
 
   void _schedulePoll() {
+    final scheduledGeneration = _verificationGeneration;
     final delay = _delayForTick(_pollTickIndex);
     _pollTimer = Timer(delay, () async {
       _pollTickIndex++;
@@ -212,6 +215,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       // would re-arm the timer and poll forever. resumePollingAfterTimeout()
       // restarts cleanly via startPolling when a late link click warrants it.
       if (!isClosed &&
+          scheduledGeneration == _verificationGeneration &&
           _pendingDeviceCode != null &&
           state.status != EmailVerificationStatus.pollingTimedOut) {
         _schedulePoll();
@@ -749,12 +753,45 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         name: 'EmailVerificationCubit',
         category: LogCategory.auth,
       );
+      final pollGeneration = _verificationGeneration;
+      final deviceCode = _pendingDeviceCode;
+      final verifier = _pendingVerifier;
+      if (deviceCode == null) {
+        Log.warning(
+          'Poll called but pending device code was cleared, cleaning up',
+          name: 'EmailVerificationCubit',
+          category: LogCategory.auth,
+        );
+        _cleanup();
+        return;
+      }
+
       final tokenResult = await _verifyPendingTokenIfNeeded();
+      if (pollGeneration != _verificationGeneration ||
+          _pendingDeviceCode != deviceCode ||
+          _pendingVerifier != verifier) {
+        Log.info(
+          'Poll context changed during token verification — abandoning stale poll',
+          name: 'EmailVerificationCubit',
+          category: LogCategory.auth,
+        );
+        return;
+      }
       if (tokenResult.status == EmailTokenVerificationStatus.terminalFailure) {
         return;
       }
 
-      final result = await _oauthClient.pollForCode(_pendingDeviceCode!);
+      final result = await _oauthClient.pollForCode(deviceCode);
+      if (pollGeneration != _verificationGeneration ||
+          _pendingDeviceCode != deviceCode ||
+          _pendingVerifier != verifier) {
+        Log.info(
+          'Poll context changed during pollForCode — abandoning stale poll',
+          name: 'EmailVerificationCubit',
+          category: LogCategory.auth,
+        );
+        return;
+      }
 
       Log.info(
         'Poll result: status=${result.status}, hasCode=${result.code != null}, '
@@ -767,7 +804,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         case PollStatus.complete:
           Log.info(
             'Email verification complete! code=${result.code != null}, '
-            'verifier=${_pendingVerifier != null}',
+            'verifier=${verifier != null}',
             name: 'EmailVerificationCubit',
             category: LogCategory.auth,
           );
@@ -784,8 +821,8 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
             );
             return;
           }
-          if (result.code != null && _pendingVerifier != null) {
-            await _exchangeCodeAndLogin(result.code!, _pendingVerifier!);
+          if (result.code != null && verifier != null) {
+            await _exchangeCodeAndLogin(result.code!, verifier);
           } else {
             // Edge case: completion detected but missing code or verifier.
             // Log presence only — BYOK verifiers embed the raw nsec and
@@ -793,7 +830,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
             Log.error(
               'Verification complete but missing code or verifier! '
               'code=${result.code != null}, '
-              'verifier=${_pendingVerifier != null}',
+              'verifier=${verifier != null}',
               name: 'EmailVerificationCubit',
               category: LogCategory.auth,
             );
@@ -1056,6 +1093,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   }
 
   void _cleanup() {
+    _verificationGeneration++;
     Log.info(
       '_cleanup (cubit=$hashCode, hadPollTimer=${_pollTimer != null}, '
       'hadTimeoutTimer=${_timeoutTimer != null})',
