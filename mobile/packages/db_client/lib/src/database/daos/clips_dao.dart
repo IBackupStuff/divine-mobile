@@ -2,8 +2,11 @@
 // ABOUTME: Provides CRUD with draft-scoped queries, ordering, and
 // ABOUTME: per-account isolation via ownerPubkey.
 
+import 'dart:convert';
+
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
+import 'package:path/path.dart' as p;
 
 part 'clips_dao.g.dart';
 
@@ -300,29 +303,84 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
         .write(ClipsCompanion(ownerPubkey: Value(newOwnerPubkey)));
   }
 
-  /// Check if a filename is referenced by any clip.
+  /// Check if a filename is referenced by any clip-owned file reference.
   ///
-  /// Checks the indexed `file_path` / `thumbnail_path` columns, plus a
-  /// substring match against the serialized clip `data`. Stop-motion clips
-  /// keep their still paths only inside `data` (a JSON list of frames); the
-  /// only frame mirrored into an indexed column is the first one, via
-  /// `thumbnail_path`. Without the `data` check every other still would look
-  /// unreferenced and be deleted by `FileCleanupService` while the clip's row
-  /// still points at it — silently shrinking a saved set to a single frame.
-  ///
-  /// The `data` match is JSON-quoted (`"<filename>"`) to align with the stored
-  /// basenames. A basename's `_` is a `LIKE` single-char wildcard, so the match
-  /// can only over-approximate (keep a file a stricter check would delete),
-  /// never under-approximate — the safe direction for a deletion guard.
+  /// The indexed `file_path` / `thumbnail_path` columns cover normal clips and
+  /// thumbnail assets. Frames-only stop-motion clips have no `file_path`; their
+  /// source stills live inside the JSON `data` blob as
+  /// `stopMotionFrames[].path`, so candidate JSON rows are decoded and checked
+  /// before cleanup deletes a shared frame file.
   Future<bool> isFileReferenced(String filename) async {
-    final query = selectOnly(clips)
+    final indexedQuery = selectOnly(clips)
       ..addColumns([clips.id.count()])
       ..where(
         clips.filePath.equals(filename) |
             clips.thumbnailPath.equals(filename) |
             clips.data.like('%"$filename"%'),
       );
-    final result = await query.getSingle();
-    return (result.read(clips.id.count()) ?? 0) > 0;
+    final indexedResult = await indexedQuery.getSingle();
+    if ((indexedResult.read(clips.id.count()) ?? 0) > 0) return true;
+
+    final candidateRows = await customSelect(
+      r"SELECT data FROM clips WHERE data LIKE ? ESCAPE '\'",
+      variables: [Variable.withString('%${_escapeSqlLike(filename)}%')],
+      readsFrom: {clips},
+    ).get();
+
+    return candidateRows.any((row) {
+      try {
+        final data = json.decode(row.read<String>('data'));
+        return _jsonReferencesFilename(data, filename);
+      } on FormatException {
+        return false;
+      }
+    });
+  }
+
+  static const _jsonFilePathKeys = {
+    'filePath',
+    'thumbnailPath',
+    'ghostFramePath',
+    'forwardVideoPath',
+    'reversedVideoPath',
+    'path',
+  };
+
+  static bool _jsonReferencesFilename(
+    Object? value,
+    String filename, {
+    String? key,
+  }) {
+    if (value is String) {
+      return key != null &&
+          _jsonFilePathKeys.contains(key) &&
+          p.basename(value) == filename;
+    }
+
+    if (value is Map) {
+      for (final entry in value.entries) {
+        if (_jsonReferencesFilename(
+          entry.value,
+          filename,
+          key: entry.key.toString(),
+        )) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (value is Iterable) {
+      return value.any((item) => _jsonReferencesFilename(item, filename));
+    }
+
+    return false;
+  }
+
+  static String _escapeSqlLike(String value) {
+    return value
+        .replaceAll(r'\', r'\\')
+        .replaceAll('%', r'\%')
+        .replaceAll('_', r'\_');
   }
 }

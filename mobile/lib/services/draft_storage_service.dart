@@ -2,8 +2,6 @@
 // ABOUTME: Handles save, load, delete, clear, and migration from SharedPreferences
 
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:db_client/db_client.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/draft_local_audio_extensions.dart';
@@ -447,21 +445,16 @@ class DraftStorageService {
     return _clearMissingFinalRenderedClip(draft.copyWith(clips: validClips));
   }
 
-  /// Filter clips to only include those with existing video files.
+  /// Filter clips to only include those whose source media still exists.
   List<DivineVideoClip> _filterValidClips(List<DivineVideoClip> clips) {
-    return clips.where((clip) {
-      final videoPath = clip.video?.file?.path;
-      if (videoPath == null) return false;
-      return File(videoPath).existsSync();
-    }).toList();
+    return clips.where((clip) => clip.hasResolvableVideoFile).toList();
   }
 
   DivineVideoDraft _clearMissingFinalRenderedClip(DivineVideoDraft draft) {
     final finalClip = draft.finalRenderedClip;
     if (finalClip == null) return draft;
 
-    final videoPath = finalClip.video?.file?.path;
-    if (videoPath != null && File(videoPath).existsSync()) return draft;
+    if (finalClip.hasResolvableVideoFile) return draft;
 
     Log.info(
       '📝 Draft ${draft.id}: final rendered clip missing, clearing reference',
