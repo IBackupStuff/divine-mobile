@@ -17,16 +17,18 @@ void main() {
       Duration duration = const Duration(seconds: 5),
       String? libraryTitle,
       bool stopMotion = false,
+      int stopMotionFrameCount = 1,
     }) {
       return DivineVideoClip(
         id: id,
         video: stopMotion ? null : EditorVideo.file('/path/to/clip.mp4'),
         stopMotionFrames: stopMotion
-            ? const [
-                StopMotionClipFrame(
-                  path: '/frames/f0.jpg',
-                  duration: Duration(milliseconds: 83),
-                ),
+            ? [
+                for (var i = 0; i < stopMotionFrameCount; i++)
+                  StopMotionClipFrame(
+                    path: '/frames/f$i.jpg',
+                    duration: const Duration(milliseconds: 83),
+                  ),
               ]
             : null,
         libraryTitle: libraryTitle,
@@ -87,6 +89,16 @@ void main() {
           find.bySemanticsLabel(l10n.libraryStopMotionClipLabel),
           findsOneWidget,
         );
+      });
+
+      testWidgets('stop-motion badge shows the still count', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            clip: createClip(stopMotion: true, stopMotionFrameCount: 10),
+          ),
+        );
+
+        expect(find.text('10'), findsOneWidget);
       });
 
       testWidgets('no duration badge for a stop-motion clip', (tester) async {

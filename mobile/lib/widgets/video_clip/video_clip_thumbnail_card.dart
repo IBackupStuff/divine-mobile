@@ -106,8 +106,11 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
                     /// Thumbnail or placeholder
                     _Thumbnail(clip: widget.clip),
 
-                    /// Stop-motion marker - top left
-                    if (widget.clip.isStopMotion) const _StopMotionBadge(),
+                    /// Stop-motion marker + still count - top left
+                    if (widget.clip.isStopMotion)
+                      _StopMotionBadge(
+                        frameCount: widget.clip.stopMotionFrames?.length ?? 0,
+                      ),
 
                     /// Duration badge - bottom left. Hidden for stop-motion
                     /// recordings: their playback length (frame count / 12fps)
@@ -232,9 +235,13 @@ class _TitleBadge extends StatelessWidget {
   }
 }
 
-/// Marks a clip in the library as a stop-motion recording (top-left corner).
+/// Marks a clip in the library as a stop-motion recording and shows how many
+/// stills it holds (top-left corner).
 class _StopMotionBadge extends StatelessWidget {
-  const _StopMotionBadge();
+  const _StopMotionBadge({required this.frameCount});
+
+  /// Number of captured stills in the set.
+  final int frameCount;
 
   @override
   Widget build(BuildContext context) {
@@ -243,16 +250,29 @@ class _StopMotionBadge extends StatelessWidget {
       top: 6,
       child: Semantics(
         label: context.l10n.libraryStopMotionClipLabel,
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: VineTheme.scrim65,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: const DivineIcon(
-            icon: .imagesSquare,
-            color: VineTheme.lightText,
-            size: 14,
+        value: context.l10n.videoEditorStopMotionFramesCount(frameCount),
+        // The icon + count are decorative here; the count is already announced
+        // via the badge's semantics value, so exclude the visual content to
+        // keep a single, clean semantics node.
+        child: ExcludeSemantics(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            decoration: BoxDecoration(
+              color: VineTheme.scrim65,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 3,
+              children: [
+                const DivineIcon(
+                  icon: .imagesSquare,
+                  color: VineTheme.lightText,
+                  size: 14,
+                ),
+                Text('$frameCount', style: VineTheme.labelSmallFont()),
+              ],
+            ),
           ),
         ),
       ),
