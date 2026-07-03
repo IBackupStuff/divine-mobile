@@ -8,6 +8,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 
 /// Bottom sheet that shows video editor sub-editor actions.
@@ -62,6 +63,9 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
     );
     final totalDuration = context.select(
       (ClipEditorBloc b) => b.state.totalDuration,
+    );
+    final isStopMotion = context.select(
+      (ClipEditorBloc b) => isStopMotionComposition(b.state.clips),
     );
     return Padding(
       padding: const .all(16),
@@ -151,23 +155,27 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                   scope.onAddStickers();
                 },
               ),
-              _ItemButton(
-                icon: .bookmarkPlus,
-                label: context.l10n.videoEditorMarkerLabel,
-                semanticLabel:
-                    context.l10n.videoEditorAddTimelineMarkerSemanticLabel,
-                onTap: () {
-                  Navigator.pop(context);
-                  if (totalDuration <= Duration.zero) return;
+              // Timeline markers anchor to video playback positions; on a
+              // frames-first stop-motion composition the stills themselves
+              // are the granularity, so the option is hidden.
+              if (!isStopMotion)
+                _ItemButton(
+                  icon: .bookmarkPlus,
+                  label: context.l10n.videoEditorMarkerLabel,
+                  semanticLabel:
+                      context.l10n.videoEditorAddTimelineMarkerSemanticLabel,
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (totalDuration <= Duration.zero) return;
 
-                  context.read<TimelineOverlayBloc>().add(
-                    TimelineMarkerAdded(
-                      position: currentPosition,
-                      totalDuration: totalDuration,
-                    ),
-                  );
-                },
-              ),
+                    context.read<TimelineOverlayBloc>().add(
+                      TimelineMarkerAdded(
+                        position: currentPosition,
+                        totalDuration: totalDuration,
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ],
