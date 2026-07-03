@@ -8538,6 +8538,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ta bort markerade bildrutor';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'Vänd markerade bildrutor';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Ett ögonblick, vi slår samman dina klipp';
 

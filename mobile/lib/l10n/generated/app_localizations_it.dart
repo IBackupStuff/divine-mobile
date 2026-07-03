@@ -8621,6 +8621,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Elimina i fotogrammi selezionati';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'Inverti i fotogrammi selezionati';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Un momento, stiamo unendo le tue clip';
 

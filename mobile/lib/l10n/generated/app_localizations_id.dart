@@ -8510,6 +8510,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Hapus bingkai yang dipilih';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'Balikkan bingkai yang dipilih';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Sebentar, kami sedang menggabungkan klipmu';
 

@@ -101,6 +101,101 @@ void main() {
     });
   });
 
+  group('reverseFrames', () {
+    test('reverses the selected stills among their own slots', () {
+      // Select 0, 2, 3 of [f0, f1, f2, f3]: the selected slots keep their
+      // positions but receive the selected stills in reverse order.
+      final result = StopMotionFrameOps.reverseFrames(
+        framesOf([
+          1,
+          1,
+          1,
+          1,
+        ]),
+        {0, 2, 3},
+      );
+      expect(result.map((f) => f.path), [
+        'f3.jpg',
+        'f1.jpg',
+        'f2.jpg',
+        'f0.jpg',
+      ]);
+    });
+
+    test('returns the list unchanged for fewer than two selected', () {
+      final frames = framesOf([1, 1]);
+      expect(StopMotionFrameOps.reverseFrames(frames, {0}), same(frames));
+    });
+
+    test('returns the list unchanged for out-of-range indexes', () {
+      final frames = framesOf([1, 1]);
+      expect(StopMotionFrameOps.reverseFrames(frames, {0, 5}), same(frames));
+    });
+  });
+
+  group('moveFrames', () {
+    test('moves the selected stills as one block to the slot', () {
+      // Select f0 + f1, insert at slot 2 of the remaining [f2, f3].
+      final result = StopMotionFrameOps.moveFrames(
+        framesOf([
+          1,
+          1,
+          1,
+          1,
+        ]),
+        {0, 1},
+        2,
+      );
+      expect(result.map((f) => f.path), [
+        'f2.jpg',
+        'f3.jpg',
+        'f0.jpg',
+        'f1.jpg',
+      ]);
+    });
+
+    test(
+      "keeps the block's relative order for a non-contiguous selection",
+      () {
+        // Select f0 + f2, insert at slot 1 of the remaining [f1, f3].
+        final result = StopMotionFrameOps.moveFrames(
+          framesOf([
+            1,
+            1,
+            1,
+            1,
+          ]),
+          {0, 2},
+          1,
+        );
+        expect(result.map((f) => f.path), [
+          'f1.jpg',
+          'f0.jpg',
+          'f2.jpg',
+          'f3.jpg',
+        ]);
+      },
+    );
+
+    test('clamps the slot to the remaining list bounds', () {
+      final result = StopMotionFrameOps.moveFrames(framesOf([1, 1, 1]), {
+        0,
+      }, 99);
+      expect(result.map((f) => f.path), ['f1.jpg', 'f2.jpg', 'f0.jpg']);
+    });
+
+    test('returns the same instance for a no-op move', () {
+      final frames = framesOf([1, 1, 1]);
+      expect(StopMotionFrameOps.moveFrames(frames, {0}, 0), same(frames));
+    });
+
+    test('returns the list unchanged for an empty or invalid selection', () {
+      final frames = framesOf([1, 1]);
+      expect(StopMotionFrameOps.moveFrames(frames, const {}, 1), same(frames));
+      expect(StopMotionFrameOps.moveFrames(frames, {5}, 1), same(frames));
+    });
+  });
+
   group('setFramesHold', () {
     test('sets the hold on every selected still and marks it overridden', () {
       final result = StopMotionFrameOps.setFramesHold(

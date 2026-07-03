@@ -8481,6 +8481,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'حذف الإطارات المحددة';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'عكس الإطارات المحددة';
+
+  @override
   String get videoEditorMergeProgressLabel => 'لحظة من فضلك، نقوم بدمج مقاطعك';
 
   @override

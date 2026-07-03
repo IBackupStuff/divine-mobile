@@ -156,6 +156,62 @@ abstract class StopMotionFrameOps {
     return next;
   }
 
+  /// [frames] with the selected stills' order reversed among their own slots:
+  /// the indexes in [indexes] keep their positions, but the stills sitting on
+  /// them swap into reverse order (frame multi-select "reverse").
+  ///
+  /// Returns the list unchanged when fewer than two stills are selected or an
+  /// index is out of range.
+  static List<StopMotionClipFrame> reverseFrames(
+    List<StopMotionClipFrame> frames,
+    Set<int> indexes,
+  ) {
+    if (indexes.length < 2 ||
+        indexes.any((index) => index < 0 || index >= frames.length)) {
+      return frames;
+    }
+    final slots = indexes.toList()..sort();
+    final next = [...frames];
+    for (var k = 0; k < slots.length; k++) {
+      next[slots[k]] = frames[slots[slots.length - 1 - k]];
+    }
+    return next;
+  }
+
+  /// Moves the stills at [indexes] as one contiguous block (in their current
+  /// relative order) to [insertSlot] — an insertion position within the list
+  /// of *remaining* stills (`0..remaining.length`, clamped).
+  ///
+  /// Returns the list unchanged when the selection is empty or contains an
+  /// out-of-range index.
+  static List<StopMotionClipFrame> moveFrames(
+    List<StopMotionClipFrame> frames,
+    Set<int> indexes,
+    int insertSlot,
+  ) {
+    if (indexes.isEmpty ||
+        indexes.any((index) => index < 0 || index >= frames.length)) {
+      return frames;
+    }
+    final selected = <StopMotionClipFrame>[];
+    final remaining = <StopMotionClipFrame>[];
+    for (var i = 0; i < frames.length; i++) {
+      (indexes.contains(i) ? selected : remaining).add(frames[i]);
+    }
+    final slot = insertSlot.clamp(0, remaining.length);
+    final result = [
+      ...remaining.sublist(0, slot),
+      ...selected,
+      ...remaining.sublist(slot),
+    ];
+    // A move that lands everything back where it was is a no-op; return the
+    // original instance so `identical` checks (edit commit, history) skip it.
+    for (var i = 0; i < frames.length; i++) {
+      if (!identical(result[i], frames[i])) return result;
+    }
+    return frames;
+  }
+
   /// [frames] with every still at [indexes] held for [framesPerImage] output
   /// frames, each marked as an individual override (see [setFrameHold]).
   /// Out-of-range indexes are ignored.

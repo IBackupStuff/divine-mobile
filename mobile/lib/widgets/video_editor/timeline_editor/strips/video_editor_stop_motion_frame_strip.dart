@@ -13,9 +13,10 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 /// with the timeline playhead.
 ///
 /// Tapping a tile selects it (via [onFrameTapped]); long-pressing and dragging
-/// reorders the stills (via [onReorder]). This widget is presentational — it
-/// owns only the drag gesture state; the actual selection and reorder commit
-/// live in the caller.
+/// reorders the stills (via [onReorder]). In multi-select mode, long-pressing
+/// a *selected* tile drags the whole selection as one block (via
+/// [onBlockMove]). This widget is presentational — it owns only the drag
+/// gesture state; the actual selection and reorder commit live in the caller.
 class VideoEditorStopMotionFrameStrip extends StatefulWidget {
   const VideoEditorStopMotionFrameStrip({
     required this.frames,
@@ -25,6 +26,7 @@ class VideoEditorStopMotionFrameStrip extends StatefulWidget {
     this.selectedFrameIndex,
     this.isMultiSelectMode = false,
     this.selectedFrameIndexes = const {},
+    this.onBlockMove,
     this.scrollController,
     this.onReorderChanged,
     super.key,
@@ -41,7 +43,8 @@ class VideoEditorStopMotionFrameStrip extends StatefulWidget {
   final int? selectedFrameIndex;
 
   /// Whether taps toggle membership in [selectedFrameIndexes] instead of
-  /// selecting a single still. Drag reorder is disabled while active.
+  /// selecting a single still. Single-tile drag reorder is disabled while
+  /// active; long-pressing a selected tile block-drags the selection instead.
   final bool isMultiSelectMode;
 
   /// Indexes of the stills selected in multi-select mode, each highlighted
@@ -55,6 +58,11 @@ class VideoEditorStopMotionFrameStrip extends StatefulWidget {
   /// indices. A single-item move — [StopMotionFrameOps.reorderFrame] reproduces
   /// it on the source list.
   final void Function(int from, int to) onReorder;
+
+  /// Called when a multi-select block drag settles, with the insertion slot
+  /// within the list of *remaining* (unselected) stills —
+  /// [StopMotionFrameOps.moveFrames] reproduces the move on the source list.
+  final ValueChanged<int>? onBlockMove;
 
   /// Timeline scroll controller, used to auto-scroll while dragging near an
   /// edge.
@@ -85,6 +93,18 @@ class _VideoEditorStopMotionFrameStripState
 
   /// The dragged still's index in [widget.frames] when the drag began.
   int _dragStartIndex = 0;
+
+  /// Whether the active drag moves the multi-select block instead of a single
+  /// tile. While set, [_orderedFrames] holds only the *unselected* stills and
+  /// [_blockSlot] is the insertion slot among them.
+  bool _isBlockDrag = false;
+
+  /// The selected stills being block-dragged, in their current order.
+  List<StopMotionClipFrame> _blockFrames = const [];
+
+  /// Insertion slot of the dragged block within [_orderedFrames]
+  /// (`0.._orderedFrames.length`).
+  int _blockSlot = 0;
 
   // Finger tracking (global X is the source of truth so auto-scroll and the
   // gesture callbacks never fight over the position).
@@ -140,6 +160,10 @@ class _VideoEditorStopMotionFrameStripState
     return (widths: widths, offsets: offsets, total: x);
   }
 
+  /// Drag-target index for [x]: nearest slot by tile midpoints. Only for
+  /// retargeting during a drag — for pickup use [_tileIndexAtX], which is
+  /// containment-based (midpoints would pick the neighbour when pressing the
+  /// right half of a tile).
   int _indexAtX(double x, List<double> widths) {
     var acc = 0.0;
     for (var i = 0; i < widths.length; i++) {
@@ -149,12 +173,39 @@ class _VideoEditorStopMotionFrameStripState
     return widths.length - 1;
   }
 
+  /// Index of the tile whose horizontal extent contains [x].
+  int _tileIndexAtX(double x, List<double> widths) {
+    var acc = 0.0;
+    for (var i = 0; i < widths.length; i++) {
+      acc += widths[i];
+      if (x < acc) return i;
+    }
+    return widths.length - 1;
+  }
+
+  /// Insertion slot for [x]: the number of tiles whose midpoint lies left of
+  /// it (`0..widths.length`).
+  int _slotAtX(double x, List<double> widths) {
+    var acc = 0.0;
+    var slot = 0;
+    for (final width in widths) {
+      if (x < acc + width / 2) break;
+      acc += width;
+      slot++;
+    }
+    return slot;
+  }
+
   void _onLongPressStart(LongPressStartDetails details) {
-    if (widget.frames.length <= 1 || widget.isMultiSelectMode) return;
+    if (widget.frames.length <= 1) return;
+    if (widget.isMultiSelectMode) {
+      _onBlockDragStart(details);
+      return;
+    }
 
     final layout = _computeLayout();
     final fingerX = details.localPosition.dx;
-    final pressedIndex = _indexAtX(fingerX, layout.widths);
+    final pressedIndex = _tileIndexAtX(fingerX, layout.widths);
     final tileWidth = layout.widths[pressedIndex];
     final tileLeft = layout.offsets[pressedIndex];
     final fingerRatio = tileWidth > 0
@@ -176,8 +227,56 @@ class _VideoEditorStopMotionFrameStripState
     });
   }
 
+  /// Starts dragging the whole multi-select block. Only a long-press on a
+  /// *selected* tile picks the block up; there must be at least one
+  /// unselected still left to move past.
+  void _onBlockDragStart(LongPressStartDetails details) {
+    final selection = widget.selectedFrameIndexes;
+    if (widget.onBlockMove == null ||
+        selection.isEmpty ||
+        selection.length >= widget.frames.length) {
+      return;
+    }
+
+    final layout = _computeLayout();
+    final fingerX = details.localPosition.dx;
+    final pressedIndex = _tileIndexAtX(fingerX, layout.widths);
+    if (!selection.contains(pressedIndex)) return;
+
+    final tileWidth = layout.widths[pressedIndex];
+    final tileLeft = layout.offsets[pressedIndex];
+    final fingerRatio = tileWidth > 0
+        ? ((fingerX - tileLeft) / tileWidth).clamp(0.0, 1.0)
+        : 0.5;
+
+    final blockFrames = <StopMotionClipFrame>[];
+    final remaining = <StopMotionClipFrame>[];
+    for (var i = 0; i < widget.frames.length; i++) {
+      (selection.contains(i) ? blockFrames : remaining).add(widget.frames[i]);
+    }
+
+    HapticFeedback.mediumImpact();
+    widget.onReorderChanged?.call(true);
+    setState(() {
+      _isReordering = true;
+      _isBlockDrag = true;
+      _blockFrames = blockFrames;
+      _orderedFrames = remaining;
+      _blockSlot = _slotAtX(
+        fingerX,
+        [for (final frame in remaining) _tileWidth(frame)],
+      );
+      _dragGlobalX = details.globalPosition.dx;
+      _dragStartGlobalX = details.globalPosition.dx;
+      _dragStartLocalX = fingerX;
+      _dragStartScrollOffset = widget.scrollController?.offset ?? 0;
+      _dragTileWidth = tileWidth;
+      _dragFingerRatio = fingerRatio;
+    });
+  }
+
   void _onLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
-    if (!_isReordering || _dragIndex == null) return;
+    if (!_isReordering || (!_isBlockDrag && _dragIndex == null)) return;
     setState(() {
       _dragGlobalX = details.globalPosition.dx;
       _applyDragTarget();
@@ -187,6 +286,14 @@ class _VideoEditorStopMotionFrameStripState
 
   void _applyDragTarget() {
     final widths = _computeLayout().widths;
+    if (_isBlockDrag) {
+      final slot = _slotAtX(_effectiveLocalX, widths);
+      if (slot != _blockSlot) {
+        HapticFeedback.selectionClick();
+        _blockSlot = slot;
+      }
+      return;
+    }
     final target = _indexAtX(_effectiveLocalX, widths);
     if (target != _dragIndex) {
       HapticFeedback.selectionClick();
@@ -246,10 +353,23 @@ class _VideoEditorStopMotionFrameStripState
   void _endReorder() {
     if (!_isReordering) return;
     _stopAutoScroll();
+    widget.onReorderChanged?.call(false);
+
+    if (_isBlockDrag) {
+      final slot = _blockSlot;
+      setState(() {
+        _isReordering = false;
+        _isBlockDrag = false;
+        _blockFrames = const [];
+        _orderedFrames = List.of(widget.frames);
+      });
+      widget.onBlockMove?.call(slot);
+      return;
+    }
+
     final from = _dragStartIndex;
     final to = _dragIndex ?? from;
 
-    widget.onReorderChanged?.call(false);
     setState(() {
       _isReordering = false;
       _dragIndex = null;
@@ -324,7 +444,72 @@ class _VideoEditorStopMotionFrameStripState
                   isDragging: true,
                 ),
               ),
+
+            // Block drag: an insertion marker at the target slot plus a ghost
+            // of the block (its first still with a count badge) at the finger.
+            if (_isBlockDrag) ...[
+              Positioned(
+                left:
+                    (_blockSlot < layout.offsets.length
+                        ? layout.offsets[_blockSlot]
+                        : layout.total) -
+                    1,
+                top: 0,
+                width: 2,
+                height: TimelineConstants.thumbnailStripHeight,
+                child: const ColoredBox(color: VineTheme.accentYellow),
+              ),
+              Positioned(
+                left: _effectiveLocalX - _dragTileWidth * _dragFingerRatio,
+                top: 0,
+                width: _dragTileWidth,
+                height: TimelineConstants.thumbnailStripHeight,
+                child: Stack(
+                  clipBehavior: .none,
+                  fit: StackFit.expand,
+                  children: [
+                    _FrameTile(
+                      frame: _blockFrames.first,
+                      index: 0,
+                      total: _blockFrames.length,
+                      isSelected: true,
+                      isDragging: true,
+                    ),
+                    if (_blockFrames.length > 1)
+                      PositionedDirectional(
+                        top: -6,
+                        end: -6,
+                        child: _BlockCountBadge(count: _blockFrames.length),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Count badge on the block-drag ghost showing how many stills move together.
+class _BlockCountBadge extends StatelessWidget {
+  const _BlockCountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery.withNoTextScaling(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: const BoxDecoration(
+          color: VineTheme.accentYellow,
+          borderRadius: BorderRadius.all(Radius.circular(999)),
+        ),
+        child: Text(
+          count.toString(),
+          style: VineTheme.labelSmallFont(color: VineTheme.backgroundCamera),
         ),
       ),
     );

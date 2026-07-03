@@ -8715,6 +8715,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Usuń zaznaczone klatki';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'Odwróć zaznaczone klatki';
+
+  @override
   String get videoEditorMergeProgressLabel => 'Chwila, scalamy Twoje klipy';
 
   @override

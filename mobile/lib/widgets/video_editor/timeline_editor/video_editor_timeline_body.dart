@@ -274,6 +274,21 @@ class _StopMotionFrameStrip extends StatelessWidget {
         clipId: clip.id,
         frames: StopMotionFrameOps.reorderFrame(frames, from, to),
       ),
+      onBlockMove: (slot) {
+        final bloc = context.read<ClipEditorBloc>();
+        final selection = bloc.state.selectedFrameIndexes;
+        final moved = StopMotionFrameOps.moveFrames(frames, selection, slot);
+        // No-op moves return the same instance; skip commit and selection
+        // shuffle so the history stays clean.
+        if (identical(moved, frames)) return;
+        commitStopMotionFrames(context, clipId: clip.id, frames: moved);
+        // The block now occupies slot..slot+n-1 — keep it selected.
+        bloc.add(
+          ClipEditorFrameMultiSelectionSet({
+            for (var i = 0; i < selection.length; i++) slot + i,
+          }),
+        );
+      },
     );
   }
 }

@@ -8590,6 +8590,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Excluir quadros selecionados';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'Inverter quadros selecionados';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Um momento, estamos mesclando seus clipes';
 

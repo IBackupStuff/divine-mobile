@@ -5021,6 +5021,10 @@
   "@videoEditorDeleteSelectedFramesSemanticLabel": {
     "description": "Semantic label for the delete button while stop-motion stills are multi-selected."
   },
+  "videoEditorReverseSelectedFramesSemanticLabel": "Reverse selected frames",
+  "@videoEditorReverseSelectedFramesSemanticLabel": {
+    "description": "Semantic label for the reverse button while stop-motion stills are multi-selected."
+  },
   "videoEditorMergeProgressLabel": "One moment, we're merging your clips",
   "@videoEditorMergeProgressLabel": {
     "description": "Status text shown while the selected clips are being concatenated into a single clip."

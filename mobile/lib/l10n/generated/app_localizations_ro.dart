@@ -8726,6 +8726,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Șterge cadrele selectate';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'Inversează cadrele selectate';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Un moment, îți îmbinăm clipurile';
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
@@ -40,6 +41,7 @@ void main() {
     int? selectedFrameIndex,
     bool isMultiSelectMode = false,
     Set<int> selectedFrameIndexes = const {},
+    ValueChanged<int>? onBlockMove,
   }) {
     return tester.pumpWidget(
       MaterialApp(
@@ -54,6 +56,7 @@ void main() {
               selectedFrameIndex: selectedFrameIndex,
               isMultiSelectMode: isMultiSelectMode,
               selectedFrameIndexes: selectedFrameIndexes,
+              onBlockMove: onBlockMove,
               onFrameTapped: onFrameTapped,
               onReorder: (_, _) {},
             ),
@@ -161,5 +164,65 @@ void main() {
 
     await tester.tap(find.byType(Image).at(2));
     expect(tapped, 2);
+  });
+
+  testWidgets('block drag reports the drop slot among remaining stills', (
+    tester,
+  ) async {
+    int? movedToSlot;
+    await pump(
+      tester,
+      onFrameTapped: (_) {},
+      isMultiSelectMode: true,
+      selectedFrameIndexes: {0},
+      onBlockMove: (slot) => movedToSlot = slot,
+    );
+
+    // Long-press the selected first tile, drag past the other two (each 50px
+    // wide at 100 pps x 0.5s), release: the block lands at the end (slot 2).
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(Image).at(0)),
+    );
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    // Rebuild so the drag-in-progress move/end handlers are wired.
+    await tester.pump();
+    // The block pickup shows the accent-yellow insertion marker.
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is ColoredBox && w.color == VineTheme.accentYellow,
+      ),
+      findsOneWidget,
+      reason: 'insertion marker',
+    );
+    await gesture.moveBy(const Offset(120, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(movedToSlot, 2);
+  });
+
+  testWidgets('block drag does not start on an unselected tile', (
+    tester,
+  ) async {
+    int? movedToSlot;
+    await pump(
+      tester,
+      onFrameTapped: (_) {},
+      isMultiSelectMode: true,
+      selectedFrameIndexes: {2},
+      onBlockMove: (slot) => movedToSlot = slot,
+    );
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(Image).at(0)),
+    );
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveBy(const Offset(120, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(movedToSlot, isNull);
   });
 }

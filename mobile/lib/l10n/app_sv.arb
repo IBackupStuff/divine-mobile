@@ -4024,6 +4024,7 @@
     "videoEditorMergeSelectedClipsSemanticLabel": "Slå samman markerade klipp",
     "videoEditorDeleteSelectedClipsSemanticLabel": "Ta bort markerade klipp",
     "videoEditorDeleteSelectedFramesSemanticLabel": "Ta bort markerade bildrutor",
+    "videoEditorReverseSelectedFramesSemanticLabel": "Vänd markerade bildrutor",
     "videoEditorMergeProgressLabel": "Ett ögonblick, vi slår samman dina klipp",
     "videoEditorMergeFailed": "Det gick inte att slå samman klippen. Försök igen.",
     "deleteAccountLocalDataDeletionFailed": "Account deleted and signed out, but some local data could not be removed from this device.",

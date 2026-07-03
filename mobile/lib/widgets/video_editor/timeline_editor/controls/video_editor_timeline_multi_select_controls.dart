@@ -139,6 +139,7 @@ class TimelineFrameMultiSelectControls extends StatelessWidget {
     final selectedCount = data.selected.length;
     final canDelete = selectedCount >= 1 && selectedCount < data.frameCount;
     final canSetHold = selectedCount >= 1;
+    final canReverse = selectedCount >= 2;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -190,6 +191,14 @@ class TimelineFrameMultiSelectControls extends StatelessWidget {
                         type: .primary,
                       ),
                       _ControlButton(
+                        icon: .arrowCounterClockwise,
+                        label: context.l10n.videoEditorReverseLabel,
+                        semanticLabel: context
+                            .l10n
+                            .videoEditorReverseSelectedFramesSemanticLabel,
+                        onPressed: canReverse ? () => _reverse(context) : null,
+                      ),
+                      _ControlButton(
                         icon: .trash,
                         label: context.l10n.videoEditorDeleteLabel,
                         semanticLabel: context
@@ -215,6 +224,26 @@ class TimelineFrameMultiSelectControls extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Reverses the selected stills among their own slots. The selection keeps
+  /// pointing at the same positions (now holding the reversed stills), so the
+  /// mode stays active for follow-up actions like a block move.
+  void _reverse(BuildContext context) {
+    final bloc = context.read<ClipEditorBloc>();
+    final state = bloc.state;
+    if (!isStopMotionComposition(state.clips)) return;
+    final clip = state.clips.first;
+    final frames = clip.stopMotionFrames ?? const [];
+
+    commitStopMotionFrames(
+      context,
+      clipId: clip.id,
+      frames: StopMotionFrameOps.reverseFrames(
+        frames,
+        state.selectedFrameIndexes,
       ),
     );
   }

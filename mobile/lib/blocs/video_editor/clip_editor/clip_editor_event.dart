@@ -136,6 +136,19 @@ class ClipEditorFrameMultiSelectToggled extends ClipEditorEvent {
   List<Object?> get props => [frameIndex];
 }
 
+/// Replace the frame multi-select selection wholesale.
+///
+/// Dispatched after a block move so the selection follows the stills to their
+/// new contiguous position.
+class ClipEditorFrameMultiSelectionSet extends ClipEditorEvent {
+  const ClipEditorFrameMultiSelectionSet(this.frameIndexes);
+
+  final Set<int> frameIndexes;
+
+  @override
+  List<Object?> get props => [frameIndexes];
+}
+
 /// Remove every clip currently in the multi-select selection.
 ///
 /// No-op when the selection would empty the timeline — at least one clip must

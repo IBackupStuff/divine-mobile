@@ -619,6 +619,36 @@ void main() {
       );
 
       blocTest<ClipEditorBloc, ClipEditorState>(
+        'replaces the selection wholesale after a block move',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          isMultiSelectMode: true,
+          selectedFrameIndexes: const {0, 1},
+        ),
+        act: (bloc) => bloc.add(const ClipEditorFrameMultiSelectionSet({1, 2})),
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => s.selectedFrameIndexes,
+            'selectedFrameIndexes',
+            {1, 2},
+          ),
+        ],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'ignores a selection-set with out-of-range indexes',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          isMultiSelectMode: true,
+          selectedFrameIndexes: const {0},
+        ),
+        act: (bloc) => bloc.add(const ClipEditorFrameMultiSelectionSet({0, 9})),
+        expect: () => <ClipEditorState>[],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
         'prunes out-of-range indexes when a frame delete shrinks the clip',
         build: buildBloc,
         seed: () => ClipEditorState(

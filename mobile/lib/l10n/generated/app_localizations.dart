@@ -14776,6 +14776,12 @@ abstract class AppLocalizations {
   /// **'Delete selected frames'**
   String get videoEditorDeleteSelectedFramesSemanticLabel;
 
+  /// Semantic label for the reverse button while stop-motion stills are multi-selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverse selected frames'**
+  String get videoEditorReverseSelectedFramesSemanticLabel;
+
   /// Status text shown while the selected clips are being concatenated into a single clip.
   ///
   /// In en, this message translates to:

@@ -8520,6 +8520,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Delete selected frames';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'Reverse selected frames';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'One moment, we\'re merging your clips';
 

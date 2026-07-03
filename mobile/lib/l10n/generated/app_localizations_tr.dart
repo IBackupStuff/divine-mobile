@@ -8502,6 +8502,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Seçili kareleri sil';
 
   @override
+  String get videoEditorReverseSelectedFramesSemanticLabel =>
+      'Seçili kareleri ters çevir';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Bir saniye, kliplerini birleştiriyoruz';
 

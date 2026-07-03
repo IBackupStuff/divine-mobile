@@ -106,6 +106,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     on<ClipEditorMultiSelectCancelled>(_onMultiSelectCancelled);
     on<ClipEditorFrameMultiSelectStarted>(_onFrameMultiSelectStarted);
     on<ClipEditorFrameMultiSelectToggled>(_onFrameMultiSelectToggled);
+    on<ClipEditorFrameMultiSelectionSet>(_onFrameMultiSelectionSet);
     on<ClipEditorSelectedClipsRemoved>(_onSelectedClipsRemoved);
     on<ClipEditorSelectedClipsMergeRequested>(
       _onSelectedClipsMergeRequested,
@@ -370,6 +371,21 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       selected.add(event.frameIndex);
     }
     emit(state.copyWith(selectedFrameIndexes: selected));
+  }
+
+  void _onFrameMultiSelectionSet(
+    ClipEditorFrameMultiSelectionSet event,
+    Emitter<ClipEditorState> emit,
+  ) {
+    if (!state.isMultiSelectMode) return;
+    if (!isStopMotionComposition(state.clips)) return;
+    final frames = state.clips.first.stopMotionFrames ?? const [];
+    if (event.frameIndexes.any(
+      (index) => index < 0 || index >= frames.length,
+    )) {
+      return;
+    }
+    emit(state.copyWith(selectedFrameIndexes: event.frameIndexes));
   }
 
   void _onSelectedClipsRemoved(
