@@ -4023,6 +4023,7 @@
     "videoEditorMergeLabel": "結合",
     "videoEditorMergeSelectedClipsSemanticLabel": "選択したクリップを結合",
     "videoEditorDeleteSelectedClipsSemanticLabel": "選択したクリップを削除",
+    "videoEditorDeleteSelectedFramesSemanticLabel": "選択したフレームを削除",
     "videoEditorMergeProgressLabel": "少々お待ちください。クリップを結合しています",
     "videoEditorMergeFailed": "クリップを結合できませんでした。もう一度お試しください。",
     "deleteAccountLocalDataDeletionFailed": "Account deleted and signed out, but some local data could not be removed from this device.",

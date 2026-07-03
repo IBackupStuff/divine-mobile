@@ -35,6 +35,7 @@ class ClipEditorState extends Equatable {
     this.lastMergeResult,
     this.lastClipsRemovedResult,
     this.selectedFrameIndex,
+    this.selectedFrameIndexes = const {},
   });
 
   /// Local copy of clips managed by this editor session.
@@ -161,6 +162,11 @@ class ClipEditorState extends Equatable {
   /// stop-motion). Drives the per-frame action bar and tile highlight.
   final int? selectedFrameIndex;
 
+  /// Indexes of the stills selected while [isMultiSelectMode] is active on a
+  /// stop-motion composition — the frame counterpart of [selectedClipIds].
+  /// Always empty outside frame multi-select.
+  final Set<int> selectedFrameIndexes;
+
   /// Total wall-clock duration of all clips (respecting trim and playback speed).
   Duration get totalDuration =>
       clips.fold(Duration.zero, (sum, clip) => sum + clip.playbackDuration);
@@ -200,6 +206,7 @@ class ClipEditorState extends Equatable {
     ClipsRemovedResult? lastClipsRemovedResult,
     int? selectedFrameIndex,
     bool clearSelectedFrameIndex = false,
+    Set<int>? selectedFrameIndexes,
   }) {
     return ClipEditorState(
       clips: clips ?? this.clips,
@@ -241,6 +248,7 @@ class ClipEditorState extends Equatable {
       selectedFrameIndex: clearSelectedFrameIndex
           ? null
           : (selectedFrameIndex ?? this.selectedFrameIndex),
+      selectedFrameIndexes: selectedFrameIndexes ?? this.selectedFrameIndexes,
     );
   }
 
@@ -277,6 +285,7 @@ class ClipEditorState extends Equatable {
     // Identity-only: each ClipsRemovedResult is a fresh instance per removal.
     identityHashCode(lastClipsRemovedResult),
     selectedFrameIndex,
+    selectedFrameIndexes,
   ];
 }
 

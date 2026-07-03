@@ -76,6 +76,57 @@ void main() {
     });
   });
 
+  group('removeFrames', () {
+    test('removes every still at the given indexes', () {
+      final result = StopMotionFrameOps.removeFrames(framesOf([1, 1, 1, 1]), {
+        1,
+        3,
+      });
+      expect(result.map((f) => f.path), ['f0.jpg', 'f2.jpg']);
+    });
+
+    test('keeps at least one still (cannot empty the clip)', () {
+      final frames = framesOf([1, 1]);
+      expect(StopMotionFrameOps.removeFrames(frames, {0, 1}), same(frames));
+    });
+
+    test('returns the list unchanged for out-of-range indexes', () {
+      final frames = framesOf([1, 1]);
+      expect(StopMotionFrameOps.removeFrames(frames, {0, 5}), same(frames));
+    });
+
+    test('returns the list unchanged for an empty selection', () {
+      final frames = framesOf([1, 1]);
+      expect(StopMotionFrameOps.removeFrames(frames, const {}), same(frames));
+    });
+  });
+
+  group('setFramesHold', () {
+    test('sets the hold on every selected still and marks it overridden', () {
+      final result = StopMotionFrameOps.setFramesHold(
+        framesOf([1, 1, 1]),
+        {0, 2},
+        4,
+      );
+
+      expect(
+        result.map(
+          (f) => StopMotionFrameOps.durationToFramesPerImage(f.duration),
+        ),
+        [4, 1, 4],
+      );
+      expect(result.map((f) => f.holdOverridden), [true, false, true]);
+    });
+
+    test('returns the list unchanged for an empty selection', () {
+      final frames = framesOf([1, 1]);
+      expect(
+        StopMotionFrameOps.setFramesHold(frames, const {}, 4),
+        same(frames),
+      );
+    });
+  });
+
   group('insertIndexAtPosition', () {
     final frames = framesOf([1, 1, 1]); // three 1/24s stills
 

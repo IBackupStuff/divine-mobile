@@ -86,6 +86,34 @@ Future<void> editStopMotionGlobalHold(
   );
 }
 
+/// Opens the frames-per-image wheel sheet and applies the chosen hold to every
+/// still at [frameIndexes] of the stop-motion clip [clipId] (frame
+/// multi-select). The sheet opens on the first selected still's current hold.
+Future<void> editStopMotionFramesHold(
+  BuildContext context, {
+  required String clipId,
+  required Set<int> frameIndexes,
+}) async {
+  final frames = _stopMotionFrames(context, clipId);
+  if (frames == null || frameIndexes.isEmpty) return;
+  final firstIndex = frameIndexes.reduce((a, b) => a < b ? a : b);
+  if (firstIndex < 0 || firstIndex >= frames.length) return;
+  final current = StopMotionFrameOps.durationToFramesPerImage(
+    frames[firstIndex].duration,
+  );
+
+  final result = await _showFramesPerImageSheet(context, current);
+  if (result == null || !context.mounted) return;
+
+  final latest = _stopMotionFrames(context, clipId);
+  if (latest == null) return;
+  commitStopMotionFrames(
+    context,
+    clipId: clipId,
+    frames: StopMotionFrameOps.setFramesHold(latest, frameIndexes, result),
+  );
+}
+
 /// Opens the frames-per-image wheel sheet and applies the chosen hold to the
 /// still at [frameIndex] of the stop-motion clip [clipId].
 Future<void> editStopMotionFrameHold(

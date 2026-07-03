@@ -8186,6 +8186,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorDeleteSelectedClipsSemanticLabel => '選択したクリップを削除';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel => '選択したフレームを削除';
+
+  @override
   String get videoEditorMergeProgressLabel => '少々お待ちください。クリップを結合しています';
 
   @override

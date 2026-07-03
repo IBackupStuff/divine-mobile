@@ -244,18 +244,31 @@ class _StopMotionFrameStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frames = clip.stopMotionFrames ?? const [];
-    final selectedFrameIndex = context.select(
-      (ClipEditorBloc b) => b.state.selectedFrameIndex,
+    final (
+      selectedFrameIndex,
+      isMultiSelectMode,
+      selectedFrameIndexes,
+    ) = context.select(
+      (ClipEditorBloc b) => (
+        b.state.selectedFrameIndex,
+        b.state.isMultiSelectMode,
+        b.state.selectedFrameIndexes,
+      ),
     );
 
     return VideoEditorStopMotionFrameStrip(
       frames: frames,
       pixelsPerSecond: pixelsPerSecond,
       selectedFrameIndex: selectedFrameIndex,
+      isMultiSelectMode: isMultiSelectMode,
+      selectedFrameIndexes: selectedFrameIndexes,
       scrollController: scrollController,
       onReorderChanged: onReorderChanged,
-      onFrameTapped: (index) =>
-          context.read<ClipEditorBloc>().add(ClipEditorFrameSelected(index)),
+      onFrameTapped: (index) => context.read<ClipEditorBloc>().add(
+        isMultiSelectMode
+            ? ClipEditorFrameMultiSelectToggled(index)
+            : ClipEditorFrameSelected(index),
+      ),
       onReorder: (from, to) => commitStopMotionFrames(
         context,
         clipId: clip.id,

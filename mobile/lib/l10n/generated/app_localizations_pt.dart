@@ -8586,6 +8586,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Excluir clipes selecionados';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel =>
+      'Excluir quadros selecionados';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Um momento, estamos mesclando seus clipes';
 

@@ -8711,6 +8711,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Usuń zaznaczone klipy';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel =>
+      'Usuń zaznaczone klatki';
+
+  @override
   String get videoEditorMergeProgressLabel => 'Chwila, scalamy Twoje klipy';
 
   @override

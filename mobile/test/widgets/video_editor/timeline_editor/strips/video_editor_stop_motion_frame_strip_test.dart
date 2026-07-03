@@ -38,6 +38,8 @@ void main() {
     WidgetTester tester, {
     required ValueChanged<int> onFrameTapped,
     int? selectedFrameIndex,
+    bool isMultiSelectMode = false,
+    Set<int> selectedFrameIndexes = const {},
   }) {
     return tester.pumpWidget(
       MaterialApp(
@@ -50,6 +52,8 @@ void main() {
               frames: frames,
               pixelsPerSecond: 100,
               selectedFrameIndex: selectedFrameIndex,
+              isMultiSelectMode: isMultiSelectMode,
+              selectedFrameIndexes: selectedFrameIndexes,
               onFrameTapped: onFrameTapped,
               onReorder: (_, _) {},
             ),
@@ -124,5 +128,38 @@ void main() {
           .width,
       2,
     );
+  });
+
+  testWidgets('multi-select highlights every selected tile', (tester) async {
+    await pump(
+      tester,
+      onFrameTapped: (_) {},
+      isMultiSelectMode: true,
+      selectedFrameIndexes: {0, 2},
+    );
+
+    final selectedBoxes = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .where((box) {
+          final decoration = box.decoration;
+          return decoration is BoxDecoration &&
+              decoration.border is Border &&
+              (decoration.border! as Border).top.color ==
+                  VineTheme.accentYellow;
+        });
+
+    expect(selectedBoxes, hasLength(2));
+  });
+
+  testWidgets('multi-select taps still report the tile index', (tester) async {
+    int? tapped;
+    await pump(
+      tester,
+      onFrameTapped: (index) => tapped = index,
+      isMultiSelectMode: true,
+    );
+
+    await tester.tap(find.byType(Image).at(2));
+    expect(tapped, 2);
   });
 }

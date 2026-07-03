@@ -14770,6 +14770,12 @@ abstract class AppLocalizations {
   /// **'Delete selected clips'**
   String get videoEditorDeleteSelectedClipsSemanticLabel;
 
+  /// Semantic label for the delete button while stop-motion stills are multi-selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected frames'**
+  String get videoEditorDeleteSelectedFramesSemanticLabel;
+
   /// Status text shown while the selected clips are being concatenated into a single clip.
   ///
   /// In en, this message translates to:

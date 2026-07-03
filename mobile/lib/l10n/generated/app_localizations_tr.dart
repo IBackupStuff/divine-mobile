@@ -8498,6 +8498,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Seçili klipleri sil';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel =>
+      'Seçili kareleri sil';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Bir saniye, kliplerini birleştiriyoruz';
 

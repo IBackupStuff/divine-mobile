@@ -8634,6 +8634,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ausgewählte Clips löschen';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel =>
+      'Ausgewählte Frames löschen';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Einen Moment, wir führen deine Clips zusammen';
 

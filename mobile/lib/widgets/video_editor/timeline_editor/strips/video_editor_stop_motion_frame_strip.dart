@@ -23,6 +23,8 @@ class VideoEditorStopMotionFrameStrip extends StatefulWidget {
     required this.onFrameTapped,
     required this.onReorder,
     this.selectedFrameIndex,
+    this.isMultiSelectMode = false,
+    this.selectedFrameIndexes = const {},
     this.scrollController,
     this.onReorderChanged,
     super.key,
@@ -37,6 +39,14 @@ class VideoEditorStopMotionFrameStrip extends StatefulWidget {
 
   /// Index of the currently selected still, highlighted with a border.
   final int? selectedFrameIndex;
+
+  /// Whether taps toggle membership in [selectedFrameIndexes] instead of
+  /// selecting a single still. Drag reorder is disabled while active.
+  final bool isMultiSelectMode;
+
+  /// Indexes of the stills selected in multi-select mode, each highlighted
+  /// like the single selection.
+  final Set<int> selectedFrameIndexes;
 
   /// Called with the tapped still's index.
   final ValueChanged<int> onFrameTapped;
@@ -140,7 +150,7 @@ class _VideoEditorStopMotionFrameStripState
   }
 
   void _onLongPressStart(LongPressStartDetails details) {
-    if (widget.frames.length <= 1) return;
+    if (widget.frames.length <= 1 || widget.isMultiSelectMode) return;
 
     final layout = _computeLayout();
     final fingerX = details.localPosition.dx;
@@ -293,7 +303,10 @@ class _VideoEditorStopMotionFrameStripState
                     index: i,
                     total: _orderedFrames.length,
                     isSelected:
-                        !_isReordering && i == widget.selectedFrameIndex,
+                        !_isReordering &&
+                        (widget.isMultiSelectMode
+                            ? widget.selectedFrameIndexes.contains(i)
+                            : i == widget.selectedFrameIndex),
                     onTap: _isReordering ? null : () => widget.onFrameTapped(i),
                   ),
                 ),

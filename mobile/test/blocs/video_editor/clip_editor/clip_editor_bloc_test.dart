@@ -529,6 +529,121 @@ void main() {
       );
     });
 
+    group('frame multi-select', () {
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'starts with the current frame pre-selected and exits editing',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          selectedFrameIndex: 1,
+          isEditing: true,
+        ),
+        act: (bloc) => bloc.add(const ClipEditorFrameMultiSelectStarted(1)),
+        expect: () => [
+          isA<ClipEditorState>()
+              .having((s) => s.isMultiSelectMode, 'isMultiSelectMode', isTrue)
+              .having((s) => s.isEditing, 'isEditing', isFalse)
+              .having(
+                (s) => s.selectedFrameIndex,
+                'selectedFrameIndex',
+                isNull,
+              )
+              .having((s) => s.selectedFrameIndexes, 'selectedFrameIndexes', {
+                1,
+              }),
+        ],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'is a no-op for a normal video composition',
+        build: buildBloc,
+        seed: () => ClipEditorState(clips: twoClips),
+        act: (bloc) => bloc.add(const ClipEditorFrameMultiSelectStarted(0)),
+        expect: () => <ClipEditorState>[],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'toggling adds and removes stills from the selection',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          isMultiSelectMode: true,
+          selectedFrameIndexes: const {0},
+        ),
+        act: (bloc) => bloc
+          ..add(const ClipEditorFrameMultiSelectToggled(2))
+          ..add(const ClipEditorFrameMultiSelectToggled(0)),
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => s.selectedFrameIndexes,
+            'selectedFrameIndexes',
+            {0, 2},
+          ),
+          isA<ClipEditorState>().having(
+            (s) => s.selectedFrameIndexes,
+            'selectedFrameIndexes',
+            {2},
+          ),
+        ],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'ignores an out-of-range toggle',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          isMultiSelectMode: true,
+        ),
+        act: (bloc) => bloc.add(const ClipEditorFrameMultiSelectToggled(9)),
+        expect: () => <ClipEditorState>[],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'cancelling clears the frame selection and exits the mode',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          isMultiSelectMode: true,
+          selectedFrameIndexes: const {0, 1},
+        ),
+        act: (bloc) => bloc.add(const ClipEditorMultiSelectCancelled()),
+        expect: () => [
+          isA<ClipEditorState>()
+              .having((s) => s.isMultiSelectMode, 'isMultiSelectMode', isFalse)
+              .having(
+                (s) => s.selectedFrameIndexes,
+                'selectedFrameIndexes',
+                isEmpty,
+              ),
+        ],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'prunes out-of-range indexes when a frame delete shrinks the clip',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [_createStopMotionClip()],
+          isMultiSelectMode: true,
+          selectedFrameIndexes: const {0, 2},
+        ),
+        act: (bloc) {
+          final clip = bloc.state.clips.first;
+          final shorter = StopMotionFrameOps.clipWithFrames(
+            clip,
+            StopMotionFrameOps.removeFrame(clip.stopMotionFrames!, 2),
+          );
+          bloc.add(ClipEditorClipUpdated(clipId: clip.id, clip: shorter));
+        },
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => s.selectedFrameIndexes,
+            'selectedFrameIndexes',
+            {0},
+          ),
+        ],
+      );
+    });
+
     // =========================================================
     // EDITING MODE
     // =========================================================

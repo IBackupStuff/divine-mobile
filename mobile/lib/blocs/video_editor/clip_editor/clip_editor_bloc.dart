@@ -104,6 +104,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     on<ClipEditorMultiSelectStarted>(_onMultiSelectStarted);
     on<ClipEditorMultiSelectClipToggled>(_onMultiSelectClipToggled);
     on<ClipEditorMultiSelectCancelled>(_onMultiSelectCancelled);
+    on<ClipEditorFrameMultiSelectStarted>(_onFrameMultiSelectStarted);
+    on<ClipEditorFrameMultiSelectToggled>(_onFrameMultiSelectToggled);
     on<ClipEditorSelectedClipsRemoved>(_onSelectedClipsRemoved);
     on<ClipEditorSelectedClipsMergeRequested>(
       _onSelectedClipsMergeRequested,
@@ -226,11 +228,18 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     final clampedSelection = selected != null && frames != null
         ? selected.clamp(0, frames.length - 1)
         : selected;
+    final prunedMultiSelection = frames != null
+        ? {
+            for (final index in state.selectedFrameIndexes)
+              if (index < frames.length) index,
+          }
+        : state.selectedFrameIndexes;
 
     emit(
       state.copyWith(
         clips: List.unmodifiable(newClips),
         selectedFrameIndex: clampedSelection,
+        selectedFrameIndexes: prunedMultiSelection,
       ),
     );
   }
@@ -319,8 +328,48 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     Emitter<ClipEditorState> emit,
   ) {
     emit(
-      state.copyWith(isMultiSelectMode: false, selectedClipIds: const {}),
+      state.copyWith(
+        isMultiSelectMode: false,
+        selectedClipIds: const {},
+        selectedFrameIndexes: const {},
+      ),
     );
+  }
+
+  void _onFrameMultiSelectStarted(
+    ClipEditorFrameMultiSelectStarted event,
+    Emitter<ClipEditorState> emit,
+  ) {
+    if (!isStopMotionComposition(state.clips)) return;
+    final frames = state.clips.first.stopMotionFrames ?? const [];
+    final initial = event.initialFrameIndex;
+    emit(
+      state.copyWith(
+        isMultiSelectMode: true,
+        isEditing: false,
+        clearSelectedFrameIndex: true,
+        selectedFrameIndexes: {
+          if (initial != null && initial >= 0 && initial < frames.length)
+            initial,
+        },
+      ),
+    );
+  }
+
+  void _onFrameMultiSelectToggled(
+    ClipEditorFrameMultiSelectToggled event,
+    Emitter<ClipEditorState> emit,
+  ) {
+    if (!state.isMultiSelectMode) return;
+    if (!isStopMotionComposition(state.clips)) return;
+    final frames = state.clips.first.stopMotionFrames ?? const [];
+    if (event.frameIndex < 0 || event.frameIndex >= frames.length) return;
+
+    final selected = Set<int>.of(state.selectedFrameIndexes);
+    if (!selected.remove(event.frameIndex)) {
+      selected.add(event.frameIndex);
+    }
+    emit(state.copyWith(selectedFrameIndexes: selected));
   }
 
   void _onSelectedClipsRemoved(

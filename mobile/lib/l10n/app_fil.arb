@@ -2599,6 +2599,7 @@
     "videoEditorMergeLabel": "Pagsamahin",
     "videoEditorMergeSelectedClipsSemanticLabel": "Pagsamahin ang mga napiling clip",
     "videoEditorDeleteSelectedClipsSemanticLabel": "Tanggalin ang mga napiling clip",
+    "videoEditorDeleteSelectedFramesSemanticLabel": "Tanggalin ang mga napiling frame",
     "videoEditorMergeProgressLabel": "Sandali lang, pinagsasama namin ang iyong mga clip",
     "videoEditorMergeFailed": "Hindi mapagsama ang mga clip. Pakisubukang muli.",
     "deleteAccountLocalDataDeletionFailed": "Account deleted and signed out, but some local data could not be removed from this device.",

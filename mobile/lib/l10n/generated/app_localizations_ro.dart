@@ -8722,6 +8722,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Șterge clipurile selectate';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel =>
+      'Șterge cadrele selectate';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Un moment, îți îmbinăm clipurile';
 

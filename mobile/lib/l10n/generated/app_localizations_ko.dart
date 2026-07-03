@@ -8211,6 +8211,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorDeleteSelectedClipsSemanticLabel => '선택한 클립 삭제';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel => '선택한 프레임 삭제';
+
+  @override
   String get videoEditorMergeProgressLabel => '잠시만요, 클립을 병합하고 있어요';
 
   @override

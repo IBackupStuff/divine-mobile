@@ -4023,6 +4023,7 @@
     "videoEditorMergeLabel": "Îmbină",
     "videoEditorMergeSelectedClipsSemanticLabel": "Îmbină clipurile selectate",
     "videoEditorDeleteSelectedClipsSemanticLabel": "Șterge clipurile selectate",
+    "videoEditorDeleteSelectedFramesSemanticLabel": "Șterge cadrele selectate",
     "videoEditorMergeProgressLabel": "Un moment, îți îmbinăm clipurile",
     "videoEditorMergeFailed": "Clipurile nu au putut fi îmbinate. Încearcă din nou.",
     "deleteAccountLocalDataDeletionFailed": "Account deleted and signed out, but some local data could not be removed from this device.",

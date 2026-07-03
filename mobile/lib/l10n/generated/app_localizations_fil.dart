@@ -8631,6 +8631,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Tanggalin ang mga napiling clip';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel =>
+      'Tanggalin ang mga napiling frame';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Sandali lang, pinagsasama namin ang iyong mga clip';
 

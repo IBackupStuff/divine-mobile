@@ -8618,6 +8618,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изтриване на избраните клипове';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel =>
+      'Изтриване на избраните кадри';
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Един момент, обединяваме клиповете ти';
 

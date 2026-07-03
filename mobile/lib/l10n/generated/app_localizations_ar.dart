@@ -8477,6 +8477,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'حذف المقاطع المحددة';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel =>
+      'حذف الإطارات المحددة';
+
+  @override
   String get videoEditorMergeProgressLabel => 'لحظة من فضلك، نقوم بدمج مقاطعك';
 
   @override

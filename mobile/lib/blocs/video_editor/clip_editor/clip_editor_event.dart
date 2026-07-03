@@ -112,6 +112,30 @@ class ClipEditorMultiSelectCancelled extends ClipEditorEvent {
   const ClipEditorMultiSelectCancelled();
 }
 
+/// Enter frame multi-select mode on a stop-motion composition, optionally
+/// pre-selecting the still at [initialFrameIndex].
+///
+/// Exits single-frame editing mode. While active, tapping a still toggles its
+/// membership in the selection.
+class ClipEditorFrameMultiSelectStarted extends ClipEditorEvent {
+  const ClipEditorFrameMultiSelectStarted([this.initialFrameIndex]);
+
+  final int? initialFrameIndex;
+
+  @override
+  List<Object?> get props => [initialFrameIndex];
+}
+
+/// Toggle a still's membership in the frame multi-select selection.
+class ClipEditorFrameMultiSelectToggled extends ClipEditorEvent {
+  const ClipEditorFrameMultiSelectToggled(this.frameIndex);
+
+  final int frameIndex;
+
+  @override
+  List<Object?> get props => [frameIndex];
+}
+
 /// Remove every clip currently in the multi-select selection.
 ///
 /// No-op when the selection would empty the timeline — at least one clip must

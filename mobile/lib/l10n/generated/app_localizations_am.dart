@@ -8352,6 +8352,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorDeleteSelectedClipsSemanticLabel => 'የተመረጡ ቅንጥቦችን ሰርዝ';
 
   @override
+  String get videoEditorDeleteSelectedFramesSemanticLabel => 'የተመረጡ ፍሬሞችን ሰርዝ';
+
+  @override
   String get videoEditorMergeProgressLabel => 'ትንሽ ይቆዩ፣ ቅንጥቦችዎን እያዋሃድን ነው';
 
   @override

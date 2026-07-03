@@ -100,6 +100,26 @@ abstract class StopMotionFrameOps {
     return [...frames]..removeAt(index);
   }
 
+  /// [frames] with the stills at [indexes] removed.
+  ///
+  /// Returns the list unchanged when [indexes] is empty, contains an
+  /// out-of-range index, or removing them would empty the clip — a
+  /// stop-motion clip must keep at least one still.
+  static List<StopMotionClipFrame> removeFrames(
+    List<StopMotionClipFrame> frames,
+    Set<int> indexes,
+  ) {
+    if (indexes.isEmpty ||
+        indexes.any((index) => index < 0 || index >= frames.length) ||
+        indexes.length >= frames.length) {
+      return frames;
+    }
+    return [
+      for (var i = 0; i < frames.length; i++)
+        if (!indexes.contains(i)) frames[i],
+    ];
+  }
+
   /// [frames] with the still at [from] moved to [to].
   static List<StopMotionClipFrame> reorderFrame(
     List<StopMotionClipFrame> frames,
@@ -134,6 +154,24 @@ abstract class StopMotionFrameOps {
       holdOverridden: true,
     );
     return next;
+  }
+
+  /// [frames] with every still at [indexes] held for [framesPerImage] output
+  /// frames, each marked as an individual override (see [setFrameHold]).
+  /// Out-of-range indexes are ignored.
+  static List<StopMotionClipFrame> setFramesHold(
+    List<StopMotionClipFrame> frames,
+    Set<int> indexes,
+    int framesPerImage,
+  ) {
+    if (indexes.isEmpty) return frames;
+    final duration = framesPerImageToDuration(framesPerImage);
+    return [
+      for (var i = 0; i < frames.length; i++)
+        indexes.contains(i)
+            ? frames[i].copyWith(duration: duration, holdOverridden: true)
+            : frames[i],
+    ];
   }
 
   /// Applies [framesPerImage] as the global default: every still that has *not*
