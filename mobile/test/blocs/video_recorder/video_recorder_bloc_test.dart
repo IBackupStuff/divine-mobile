@@ -2063,6 +2063,37 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'the shutter tick fires before the captured frame lands',
+        setUp: () {
+          // Simulate the slow native capture: the blink must not wait for it.
+          when(() => cameraService.capturePhoto()).thenAnswer((_) async {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+            return PhotoCaptureResult(filePath: framePath);
+          });
+        },
+        build: buildBloc,
+        seed: () => const VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.stopMotion,
+        ),
+        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<VideoRecorderBlocState>()
+              .having(
+                (s) => s.stopMotionShutterTick,
+                'stopMotionShutterTick',
+                1,
+              )
+              .having((s) => s.stopMotionFrames, 'stopMotionFrames', isEmpty),
+          isA<VideoRecorderBlocState>().having(
+            (s) => s.stopMotionFrames,
+            'stopMotionFrames',
+            hasLength(1),
+          ),
+        ],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'a captured frame is persisted to the library immediately',
         build: buildBloc,
         seed: () => const VideoRecorderBlocState(

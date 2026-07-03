@@ -1502,6 +1502,12 @@ class VideoRecorderBloc
     }
 
     unawaited(HapticService.recordingFeedback());
+    // Shutter feedback must fire NOW — the native capture below takes
+    // hundreds of ms, and blinking only once the frame lands feels laggy
+    // compared to the system camera.
+    emit(
+      state.copyWith(stopMotionShutterTick: state.stopMotionShutterTick + 1),
+    );
 
     final photo = await _cameraService.capturePhoto();
     if (photo == null) {
@@ -1731,6 +1737,7 @@ class VideoRecorderBloc
         // assemble).
         stopMotionFrames: state.stopMotionFrames,
         stopMotionStatus: state.stopMotionStatus,
+        stopMotionShutterTick: state.stopMotionShutterTick,
       ),
     );
   }

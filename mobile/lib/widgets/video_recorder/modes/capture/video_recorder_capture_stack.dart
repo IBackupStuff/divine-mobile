@@ -11,6 +11,7 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_recorder/clip_delete_snackbar.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_actions.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_top_bar.dart';
+import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_shutter_flash.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_countdown_overlay.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
@@ -55,15 +56,23 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
-    final (isRecording, capturesStills, stopMotionFrameCount) = context.select(
+    final (
+      isRecording,
+      recorderMode,
+      stopMotionFrameCount,
+      stopMotionShutterTick,
+    ) = context.select(
       (VideoRecorderBloc b) => (
         b.state.isRecording,
-        b.state.recorderMode.capturesStills,
+        b.state.recorderMode,
         b.state.stopMotionFrameCount,
+        b.state.stopMotionShutterTick,
       ),
     );
     // Stop-motion has no clips during capture; undo removes the last still.
-    final canUndo = capturesStills ? stopMotionFrameCount > 0 : hasClips;
+    final canUndo = recorderMode.capturesStills
+        ? stopMotionFrameCount > 0
+        : hasClips;
 
     return SafeArea(
       bottom: false,
@@ -76,6 +85,19 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
             borderRadius: .vertical(bottom: .circular(32)),
             child: VideoRecorderCameraPreview(),
           ),
+
+          // Shutter blink over the preview so each stop-motion capture is
+          // visibly confirmed (the haptic alone is easy to miss).
+          if (recorderMode == .stopMotion)
+            Positioned.fill(
+              child: ClipRRect(
+                clipBehavior: .hardEdge,
+                borderRadius: const .vertical(bottom: .circular(32)),
+                child: VideoRecorderShutterFlash(
+                  shutterTick: stopMotionShutterTick,
+                ),
+              ),
+            ),
 
           // Action buttons
           const Align(
@@ -110,7 +132,7 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
                           context.l10n.videoRecorderDeleteLastClipLabel,
                       type: .ghostSecondary,
                       size: .small,
-                      onPressed: capturesStills
+                      onPressed: recorderMode.capturesStills
                           ? () => context.read<VideoRecorderBloc>().add(
                               const VideoRecorderStopMotionFrameUndone(),
                             )

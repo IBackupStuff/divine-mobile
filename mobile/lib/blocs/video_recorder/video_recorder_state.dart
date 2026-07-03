@@ -61,6 +61,7 @@ class VideoRecorderBlocState extends Equatable {
     this.showZoomIndicator = false,
     this.stopMotionFrames = const [],
     this.stopMotionStatus = StopMotionStatus.idle,
+    this.stopMotionShutterTick = 0,
   });
 
   /// Recorder mode from the camera.
@@ -203,6 +204,11 @@ class VideoRecorderBlocState extends Equatable {
   /// Number of captured stop-motion frames.
   int get stopMotionFrameCount => stopMotionFrames.length;
 
+  /// Incremented the instant a stop-motion shutter fires — before the native
+  /// photo capture resolves — so shutter feedback (blink) is immediate rather
+  /// than delayed by the capture write (~400ms).
+  final int stopMotionShutterTick;
+
   /// Path of the most recently captured stop-motion frame, if any.
   String? get stopMotionLastFrame => stopMotionFrames.lastOrNull;
 
@@ -256,6 +262,7 @@ class VideoRecorderBlocState extends Equatable {
     bool? showZoomIndicator,
     List<String>? stopMotionFrames,
     StopMotionStatus? stopMotionStatus,
+    int? stopMotionShutterTick,
   }) {
     return VideoRecorderBlocState(
       recorderMode: recorderMode ?? this.recorderMode,
@@ -299,6 +306,8 @@ class VideoRecorderBlocState extends Equatable {
       showZoomIndicator: showZoomIndicator ?? this.showZoomIndicator,
       stopMotionFrames: stopMotionFrames ?? this.stopMotionFrames,
       stopMotionStatus: stopMotionStatus ?? this.stopMotionStatus,
+      stopMotionShutterTick:
+          stopMotionShutterTick ?? this.stopMotionShutterTick,
     );
   }
 
@@ -337,5 +346,6 @@ class VideoRecorderBlocState extends Equatable {
     showZoomIndicator,
     stopMotionFrames,
     stopMotionStatus,
+    stopMotionShutterTick,
   ];
 }
