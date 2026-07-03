@@ -7,6 +7,13 @@ import 'package:openvine/widgets/video_recorder/video_recorder_mode_selector.dar
 
 void main() {
   group(VideoRecorderModeSelectorWheel, () {
+    // Item widths follow each label's measured (wide, extra-bold) text, and
+    // the wheel lazily builds only the items inside its viewport. The tests
+    // below assert on every mode at once, so both the surface and the host
+    // box are sized wide enough to lay out all modes on screen — otherwise
+    // the outer labels scroll off and are never built or hit-testable.
+    const surfaceWidth = 1500.0;
+
     late VideoRecorderMode selectedMode;
     late List<VideoRecorderMode> modeChanges;
 
@@ -22,9 +29,7 @@ void main() {
         home: Scaffold(
           body: Center(
             child: SizedBox(
-              // Wide enough to lay out every mode item on screen (one per
-              // 96px) so label assertions don't miss off-screen modes.
-              width: 720,
+              width: surfaceWidth,
               child: VideoRecorderModeSelectorWheel(
                 selectedMode: mode ?? selectedMode,
                 onModeChanged: (m) => modeChanges.add(m),
@@ -35,10 +40,21 @@ void main() {
       );
     }
 
+    Future<void> pumpSelector(
+      WidgetTester tester, {
+      VideoRecorderMode? mode,
+    }) async {
+      tester.view.physicalSize = const Size(surfaceWidth, 400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(buildWidget(mode: mode));
+      await tester.pumpAndSettle();
+    }
+
     group('renders', () {
       testWidgets('renders all mode labels', (tester) async {
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
+        await pumpSelector(tester);
 
         for (final mode in VideoRecorderMode.values) {
           expect(find.text(mode.label), findsOneWidget);
@@ -46,22 +62,19 @@ void main() {
       });
 
       testWidgets('renders with capture mode selected', (tester) async {
-        await tester.pumpWidget(buildWidget(mode: VideoRecorderMode.capture));
-        await tester.pumpAndSettle();
+        await pumpSelector(tester, mode: VideoRecorderMode.capture);
 
         expect(find.byType(VideoRecorderModeSelectorWheel), findsOneWidget);
       });
 
       testWidgets('renders with classic mode selected', (tester) async {
-        await tester.pumpWidget(buildWidget(mode: VideoRecorderMode.classic));
-        await tester.pumpAndSettle();
+        await pumpSelector(tester, mode: VideoRecorderMode.classic);
 
         expect(find.byType(VideoRecorderModeSelectorWheel), findsOneWidget);
       });
 
       testWidgets('renders pill background', (tester) async {
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
+        await pumpSelector(tester);
 
         expect(find.byType(AnimatedContainer), findsOneWidget);
       });
@@ -81,8 +94,7 @@ void main() {
               .setMockMethodCallHandler(SystemChannels.platform, null);
         });
 
-        await tester.pumpWidget(buildWidget(mode: VideoRecorderMode.capture));
-        await tester.pumpAndSettle();
+        await pumpSelector(tester, mode: VideoRecorderMode.capture);
 
         await tester.tap(find.text('Classic'));
         await tester.pumpAndSettle();
@@ -90,16 +102,39 @@ void main() {
         expect(modeChanges, contains(VideoRecorderMode.classic));
       });
 
-      testWidgets('uses ShaderMask for fade-out edges', (tester) async {
-        await tester.pumpWidget(buildWidget());
+      testWidgets('a forward drag settles on one item, not the last', (
+        tester,
+      ) async {
+        // Suppress haptic feedback method channel calls in test
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+              return null;
+            });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(SystemChannels.platform, null);
+        });
+
+        await pumpSelector(tester, mode: VideoRecorderMode.capture);
+
+        // A single user drag must produce a single snap. Regression guard:
+        // the programmatic snap animation used to re-trigger snapping and run
+        // the wheel all the way to the final ("Classic") item.
+        await tester.drag(find.byType(ListView), const Offset(-60, 0));
         await tester.pumpAndSettle();
+
+        expect(modeChanges, isNotEmpty);
+        expect(modeChanges, isNot(contains(VideoRecorderMode.classic)));
+      });
+
+      testWidgets('uses ShaderMask for fade-out edges', (tester) async {
+        await pumpSelector(tester);
 
         expect(find.byType(ShaderMask), findsOneWidget);
       });
 
       testWidgets('renders horizontal ListView', (tester) async {
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
+        await pumpSelector(tester);
 
         final listView = tester.widget<ListView>(find.byType(ListView));
         expect(listView.scrollDirection, equals(Axis.horizontal));
@@ -108,8 +143,7 @@ void main() {
 
     group('accessibility', () {
       testWidgets('has Semantics for each mode', (tester) async {
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
+        await pumpSelector(tester);
 
         // Each mode should have a Text widget with the mode label
         for (final mode in VideoRecorderMode.values) {
@@ -122,11 +156,9 @@ void main() {
       testWidgets('updates selection when mode changes externally', (
         tester,
       ) async {
-        await tester.pumpWidget(buildWidget(mode: VideoRecorderMode.capture));
-        await tester.pumpAndSettle();
+        await pumpSelector(tester, mode: VideoRecorderMode.capture);
 
-        await tester.pumpWidget(buildWidget(mode: VideoRecorderMode.classic));
-        await tester.pumpAndSettle();
+        await pumpSelector(tester, mode: VideoRecorderMode.classic);
 
         expect(find.byType(VideoRecorderModeSelectorWheel), findsOneWidget);
       });

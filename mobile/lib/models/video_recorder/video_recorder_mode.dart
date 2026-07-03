@@ -59,6 +59,14 @@ enum VideoRecorderMode {
     .classic => false,
   };
 
+  bool get supportsVideoStabilization => switch (this) {
+    .upload => false,
+    .capture => true,
+    .stopMotion => false,
+    .lipSync => true,
+    .classic => false,
+  };
+
   model.AspectRatio get defaultAspectRatio => switch (this) {
     .upload => .vertical,
     .capture => .vertical,

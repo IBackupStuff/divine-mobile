@@ -23,6 +23,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         isRecording: b.state.isRecording,
         supportsTimer: b.state.recorderMode.supportsCountdownTimer,
         capturesStills: b.state.recorderMode.capturesStills,
+        supportsStabilization: b.state.recorderMode.supportsVideoStabilization,
       ),
     );
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
@@ -85,7 +86,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                         )
                       : null,
                 ),
-                const _StabilizationButton(),
+                if (state.supportsStabilization) const _StabilizationButton(),
               ],
             ),
           ),
