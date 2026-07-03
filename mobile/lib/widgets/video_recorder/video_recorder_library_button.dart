@@ -29,8 +29,15 @@ class _VideoRecorderLibraryButtonState
   /// thumbnail is still being generated (~1 s delay).
   String? _lastKnownThumbnailPath;
 
-  /// Thumbnail path from the persisted clip library, loaded on demand.
-  String? _libraryThumbnailPath;
+  /// Newest video-clip thumbnail from the persisted clip library.
+  ///
+  /// Kept separate from [_libraryStopMotionThumbnailPath] because each
+  /// recorder mode opens a type-filtered library — the button must preview
+  /// the newest entry of the current mode's type, not of the whole library.
+  String? _libraryVideoThumbnailPath;
+
+  /// Newest stop-motion-set thumbnail from the persisted clip library.
+  String? _libraryStopMotionThumbnailPath;
 
   @override
   void initState() {
@@ -43,9 +50,14 @@ class _VideoRecorderLibraryButtonState
     final libraryClips = await service.getAllClips();
     if (!mounted) return;
     setState(() {
-      _libraryThumbnailPath = libraryClips.isNotEmpty
-          ? libraryClips.first.thumbnailPath
-          : null;
+      _libraryVideoThumbnailPath = libraryClips
+          .where((clip) => !clip.isStopMotion)
+          .firstOrNull
+          ?.thumbnailPath;
+      _libraryStopMotionThumbnailPath = libraryClips
+          .where((clip) => clip.isStopMotion)
+          .firstOrNull
+          ?.thumbnailPath;
     });
   }
 
@@ -85,15 +97,18 @@ class _VideoRecorderLibraryButtonState
     final int count;
     final bool hasClips;
     if (capturesStills) {
-      // Newest still first, falling back to a prior library clip so the button
-      // still opens the library before the first frame is shot.
-      thumbnailPath = stopMotionFrames.lastOrNull ?? _libraryThumbnailPath;
+      // Newest still first, falling back to a prior library stop-motion set
+      // so the button still opens the library before the first frame is shot.
+      thumbnailPath =
+          stopMotionFrames.lastOrNull ?? _libraryStopMotionThumbnailPath;
       count = stopMotionFrames.length;
-      hasClips = stopMotionFrames.isNotEmpty || _libraryThumbnailPath != null;
+      hasClips =
+          stopMotionFrames.isNotEmpty ||
+          _libraryStopMotionThumbnailPath != null;
     } else {
-      thumbnailPath = _lastKnownThumbnailPath ?? _libraryThumbnailPath;
+      thumbnailPath = _lastKnownThumbnailPath ?? _libraryVideoThumbnailPath;
       count = clips.length;
-      hasClips = clips.isNotEmpty || _libraryThumbnailPath != null;
+      hasClips = clips.isNotEmpty || _libraryVideoThumbnailPath != null;
     }
 
     return Padding(

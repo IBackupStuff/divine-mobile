@@ -8,6 +8,7 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -403,6 +404,96 @@ void main() {
 
         expect(find.text('0'), findsNothing);
       });
+    });
+
+    group('library fallback per mode', () {
+      final videoClip = DivineVideoClip(
+        id: 'lib-video',
+        video: EditorVideo.file('/lib/video.mp4'),
+        duration: const Duration(seconds: 5),
+        recordedAt: DateTime(2024),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+        thumbnailPath: '/lib/video_thumb.jpg',
+      );
+      final stopMotionClip = DivineVideoClip(
+        id: 'lib-sm',
+        stopMotionFrames: const [
+          StopMotionClipFrame(
+            path: '/lib/sm_thumb.jpg',
+            duration: Duration(milliseconds: 42),
+          ),
+        ],
+        duration: const Duration(milliseconds: 42),
+        recordedAt: DateTime(2024),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+        thumbnailPath: '/lib/sm_thumb.jpg',
+      );
+
+      testWidgets(
+        'stop-motion mode previews the newest stop-motion set, not the '
+        'newest video clip',
+        (tester) async {
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [videoClip, stopMotionClip]);
+
+          await tester.pumpWidget(
+            buildWidget(
+              recorderState: const VideoRecorderBlocState(
+                recorderMode: VideoRecorderMode.stopMotion,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(const ValueKey('/lib/sm_thumb.jpg')), findsOne);
+          expect(
+            find.byKey(const ValueKey('/lib/video_thumb.jpg')),
+            findsNothing,
+          );
+        },
+      );
+
+      testWidgets(
+        'capture mode previews the newest video clip, not the newest '
+        'stop-motion set',
+        (tester) async {
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [stopMotionClip, videoClip]);
+
+          await tester.pumpWidget(buildWidget());
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(const ValueKey('/lib/video_thumb.jpg')), findsOne);
+          expect(find.byKey(const ValueKey('/lib/sm_thumb.jpg')), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'stop-motion mode stays empty when the library only holds video '
+        'clips',
+        (tester) async {
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [videoClip]);
+
+          await tester.pumpWidget(
+            buildWidget(
+              recorderState: const VideoRecorderBlocState(
+                recorderMode: VideoRecorderMode.stopMotion,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(Image), findsNothing);
+          final inkWell = tester.widget<InkWell>(find.byType(InkWell));
+          expect(inkWell.onTap, isNull);
+        },
+      );
     });
 
     group('non-interactive (editor-hosted recorder)', () {
