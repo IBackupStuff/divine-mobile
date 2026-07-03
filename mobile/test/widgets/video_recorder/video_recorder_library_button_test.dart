@@ -40,6 +40,7 @@ void main() {
     Widget buildWidget({
       List<DivineVideoClip>? clips,
       VideoRecorderBlocState recorderState = const VideoRecorderBlocState(),
+      bool interactive = true,
     }) {
       whenListen(
         recorderBloc,
@@ -59,7 +60,7 @@ void main() {
           home: Scaffold(
             body: BlocProvider<VideoRecorderBloc>.value(
               value: recorderBloc,
-              child: const VideoRecorderLibraryButton(),
+              child: VideoRecorderLibraryButton(interactive: interactive),
             ),
           ),
         ),
@@ -401,6 +402,38 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('0'), findsNothing);
+      });
+    });
+
+    group('non-interactive (editor-hosted recorder)', () {
+      testWidgets('still shows the capture count but cannot be pressed', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            interactive: false,
+            recorderState: const VideoRecorderBlocState(
+              recorderMode: VideoRecorderMode.stopMotion,
+              stopMotionFrames: ['/frames/a.jpg', '/frames/b.jpg'],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('2'), findsOneWidget);
+        final inkWell = tester.widget<InkWell>(find.byType(InkWell));
+        expect(inkWell.onTap, isNull);
+
+        final semantics = tester.widget<Semantics>(
+          find
+              .descendant(
+                of: find.byType(VideoRecorderLibraryButton),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(semantics.properties.enabled, isFalse);
+        expect(semantics.properties.button, isFalse);
       });
     });
   });

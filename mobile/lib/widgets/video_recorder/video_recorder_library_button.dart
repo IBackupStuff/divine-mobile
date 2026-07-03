@@ -11,7 +11,12 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
 
 class VideoRecorderLibraryButton extends ConsumerStatefulWidget {
-  const VideoRecorderLibraryButton({super.key});
+  const VideoRecorderLibraryButton({this.interactive = true, super.key});
+
+  /// Whether tapping opens the library. The editor-hosted recorder shows the
+  /// button purely as a capture-count indicator — navigating to the library
+  /// mid editor session is not supported there.
+  final bool interactive;
 
   @override
   ConsumerState<VideoRecorderLibraryButton> createState() =>
@@ -94,13 +99,13 @@ class _VideoRecorderLibraryButtonState
     return Padding(
       padding: const .only(left: 16),
       child: Semantics(
-        button: true,
+        button: widget.interactive,
         label: hasClips
             ? context.l10n.videoRecorderLibraryOpenLabel(count)
             : context.l10n.videoRecorderLibraryEmptyLabel,
-        enabled: hasClips,
+        enabled: hasClips && widget.interactive,
         child: InkWell(
-          onTap: hasClips
+          onTap: hasClips && widget.interactive
               ? () async {
                   await openRecorderLibrary(context, ref);
 
