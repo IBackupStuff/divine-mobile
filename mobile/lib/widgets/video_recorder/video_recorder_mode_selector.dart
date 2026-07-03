@@ -60,8 +60,13 @@ class _VideoRecorderModeSelectorWheelState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedMode != widget.selectedMode) {
       final index = VideoRecorderMode.values.indexOf(widget.selectedMode);
+      // Self-originated changes (tap/snap) already animated to this index.
+      if (index == _selectedIndex) return;
       setState(() => _selectedIndex = index);
-      _animateTo(index);
+      // External changes (persisted-mode restore right after open,
+      // editor-driven switches) reposition instantly — a visible scroll
+      // animation on a screen the user just opened feels broken.
+      _jumpTo(index);
     }
   }
 
@@ -69,6 +74,11 @@ class _VideoRecorderModeSelectorWheelState
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _jumpTo(int index) {
+    if (!_scrollController.hasClients) return;
+    _scrollController.jumpTo(_snapOffsets[index]);
   }
 
   Future<void> _animateTo(int index) async {

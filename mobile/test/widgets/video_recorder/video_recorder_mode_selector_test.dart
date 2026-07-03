@@ -162,6 +162,27 @@ void main() {
 
         expect(find.byType(VideoRecorderModeSelectorWheel), findsOneWidget);
       });
+
+      testWidgets(
+        'an external mode change repositions instantly without a scroll '
+        'animation (persisted-mode restore on open)',
+        (tester) async {
+          await pumpSelector(tester, mode: VideoRecorderMode.capture);
+          final scrollable = tester.state<ScrollableState>(
+            find.byType(Scrollable).first,
+          );
+          final offsetBefore = scrollable.position.pixels;
+
+          await tester.pumpWidget(buildWidget(mode: VideoRecorderMode.classic));
+
+          // The wheel is already on the new mode after the rebuild frame —
+          // no in-flight animation left for pumpAndSettle to advance.
+          final offsetAfterRebuild = scrollable.position.pixels;
+          expect(offsetAfterRebuild, isNot(equals(offsetBefore)));
+          await tester.pumpAndSettle();
+          expect(scrollable.position.pixels, equals(offsetAfterRebuild));
+        },
+      );
     });
   });
 }
