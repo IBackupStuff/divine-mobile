@@ -34,6 +34,7 @@ class StopMotionRenderService {
     required List<StopMotionClipFrame> frames,
     required model.AspectRatio aspectRatio,
     double frameRate,
+    String? taskId,
   })?
   assembleOverride;
 
@@ -43,6 +44,8 @@ class StopMotionRenderService {
   /// Each still is held for its own [StopMotionClipFrame.duration], so
   /// per-frame edits from the editor survive into the output. [aspectRatio]
   /// sets the output resolution and a centered crop ([StopMotionFit.cover]).
+  /// When [taskId] is set, the native encoder emits its progress under that
+  /// id via [ProVideoEditor.progressStreamById].
   ///
   /// Returns the output file path, or null if rendering failed or was
   /// cancelled. The native render path needs a device build to exercise.
@@ -50,6 +53,7 @@ class StopMotionRenderService {
     required List<StopMotionClipFrame> frames,
     required model.AspectRatio aspectRatio,
     double frameRate = defaultFrameRate,
+    String? taskId,
   }) async {
     final override = assembleOverride;
     if (override != null) {
@@ -57,6 +61,7 @@ class StopMotionRenderService {
         frames: frames,
         aspectRatio: aspectRatio,
         frameRate: frameRate,
+        taskId: taskId,
       );
     }
 
@@ -66,17 +71,21 @@ class StopMotionRenderService {
       frames: frames,
       aspectRatio: aspectRatio,
       frameRate: frameRate,
+      taskId: taskId,
     );
   }
 
   /// Renders [clip]'s stop-motion frames into an mp4 and returns a video-backed
   /// copy of the clip. Returns [clip] unchanged when it is already a normal
-  /// video clip.
+  /// video clip. [taskId] is forwarded to [assemble] for progress reporting.
   ///
   /// Returns `null` only when the render fails, so callers (publish, gallery
   /// save) can surface a failure instead of proceeding with a clip that has no
   /// playable video.
-  static Future<DivineVideoClip?> materialize(DivineVideoClip clip) async {
+  static Future<DivineVideoClip?> materialize(
+    DivineVideoClip clip, {
+    String? taskId,
+  }) async {
     // A normal video clip (or a stop-motion clip already materialized once)
     // has its mp4; nothing to do. A frames-only clip (no video) is rendered on
     // demand below.
@@ -88,6 +97,7 @@ class StopMotionRenderService {
     final outputPath = await assemble(
       frames: frames,
       aspectRatio: clip.targetAspectRatio,
+      taskId: taskId,
     );
     if (outputPath == null) return null;
     return clip.copyWith(video: EditorVideo.file(outputPath));
@@ -120,6 +130,7 @@ class StopMotionRenderService {
     required List<StopMotionClipFrame> frames,
     required model.AspectRatio aspectRatio,
     required double frameRate,
+    String? taskId,
   }) async {
     final outputDir = await getApplicationDocumentsDirectory();
     final outputPath = path.join(
@@ -130,6 +141,7 @@ class StopMotionRenderService {
     final renderedFrames = framesForMinOutputDuration(frames);
 
     final data = StopMotionRenderData(
+      id: taskId,
       frames: [
         for (final frame in renderedFrames)
           StopMotionFrame(

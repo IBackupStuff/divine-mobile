@@ -31,16 +31,19 @@ void main() {
       List<StopMotionClipFrame>? capturedFrames;
       model.AspectRatio? capturedRatio;
       double? capturedFrameRate;
+      String? capturedTaskId;
 
       StopMotionRenderService.assembleOverride =
           ({
             required frames,
             required aspectRatio,
             frameRate = StopMotionRenderService.defaultFrameRate,
+            String? taskId,
           }) async {
             capturedFrames = frames;
             capturedRatio = aspectRatio;
             capturedFrameRate = frameRate;
+            capturedTaskId = taskId;
             return '/tmp/out.mp4';
           };
 
@@ -48,12 +51,14 @@ void main() {
       final result = await StopMotionRenderService.assemble(
         frames: frames,
         aspectRatio: model.AspectRatio.square,
+        taskId: 'assembly-task',
       );
 
       expect(result, '/tmp/out.mp4');
       expect(capturedFrames, frames);
       expect(capturedRatio, model.AspectRatio.square);
       expect(capturedFrameRate, StopMotionRenderService.defaultFrameRate);
+      expect(capturedTaskId, 'assembly-task');
     });
 
     group('framesForMinOutputDuration', () {
@@ -173,21 +178,29 @@ void main() {
 
       test('renders the clip frames — per-frame holds included', () async {
         List<StopMotionClipFrame>? capturedFrames;
+        String? capturedTaskId;
         StopMotionRenderService.assembleOverride =
             ({
               required frames,
               required aspectRatio,
               frameRate = StopMotionRenderService.defaultFrameRate,
+              String? taskId,
             }) async {
               capturedFrames = frames;
+              capturedTaskId = taskId;
               return '/rendered.mp4';
             };
 
         final clip = stopMotionClip();
-        final result = await StopMotionRenderService.materialize(clip);
+        final result = await StopMotionRenderService.materialize(
+          clip,
+          taskId: 'render-task',
+        );
 
         // The clip's own frames (with individual hold times) reach the render.
         expect(capturedFrames, clip.stopMotionFrames);
+        // The progress task id is forwarded to the assembly.
+        expect(capturedTaskId, 'render-task');
         expect(result?.video?.file?.path, '/rendered.mp4');
         // Frames are kept as the source of truth.
         expect(result?.stopMotionFrames, clip.stopMotionFrames);
@@ -199,6 +212,7 @@ void main() {
               required frames,
               required aspectRatio,
               frameRate = StopMotionRenderService.defaultFrameRate,
+              String? taskId,
             }) async => null;
 
         final result = await StopMotionRenderService.materialize(
