@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
@@ -387,6 +388,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       ..add(const VideoEditorExternalPauseRequested(isPaused: true));
     final currentClips = ref.read(clipManagerProvider).clips;
 
+    // Clip types can't be mixed in one composition, so the picker only
+    // offers the type the session already edits.
+    final clipTypeFilter = isStopMotionComposition(currentClips)
+        ? LibraryClipTypeFilter.stopMotion
+        : LibraryClipTypeFilter.video;
+
     final newClips = await VineBottomSheet.show<List<DivineVideoClip>>(
       context: context,
       maxChildSize: 1,
@@ -395,6 +402,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       buildScrollBody: (scrollController) => LibraryScreen(
         initialTabIndex: 1,
         selectionMode: true,
+        clipTypeFilter: clipTypeFilter,
         editorClips: currentClips,
         scrollController: scrollController,
       ),
