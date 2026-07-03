@@ -8730,6 +8730,11 @@ class AppLocalizationsRo extends AppLocalizations {
       'Inversează cadrele selectate';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'Videoclipul tău trebuie să dureze cel puțin ${seconds}s — capturează încă câteva cadre.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Un moment, îți îmbinăm clipurile';
 

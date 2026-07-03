@@ -8,10 +8,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -371,6 +374,66 @@ void main() {
           expect(find.text('Save your draft?'), findsOneWidget);
         },
       );
+    });
+
+    group('stop-motion minimum length gate', () {
+      DivineVideoClip stopMotionClip(Duration total) => DivineVideoClip(
+        id: 'sm1',
+        stopMotionFrames: [
+          StopMotionClipFrame(path: '/frames/f0.jpg', duration: total),
+        ],
+        duration: total,
+        recordedAt: DateTime(2024),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      Finder doneButton() => find.ancestor(
+        of: find.byWidgetPredicate(
+          (w) => w is DivineIcon && w.icon == DivineIconName.arrowRight,
+        ),
+        matching: find.byType(DivineIconButton),
+      );
+
+      testWidgets('a too-short composition shows the snackbar and stays', (
+        tester,
+      ) async {
+        clipEditorBloc.add(
+          ClipEditorInitialized([
+            stopMotionClip(const Duration(milliseconds: 500)),
+          ]),
+        );
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.tap(doneButton());
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.videoEditorStopMotionTooShortSnackbar(1)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('a long-enough composition passes without a snackbar', (
+        tester,
+      ) async {
+        clipEditorBloc.add(
+          ClipEditorInitialized([stopMotionClip(const Duration(seconds: 2))]),
+        );
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.tap(doneButton());
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.videoEditorStopMotionTooShortSnackbar(1)),
+          findsNothing,
+        );
+      });
     });
   });
 }

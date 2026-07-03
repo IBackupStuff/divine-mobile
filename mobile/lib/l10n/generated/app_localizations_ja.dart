@@ -8192,6 +8192,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorReverseSelectedFramesSemanticLabel => '選択したフレームを逆順にする';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return '動画は$seconds秒以上必要です。もう少しフレームを撮影してください。';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel => '少々お待ちください。クリップを結合しています';
 
   @override

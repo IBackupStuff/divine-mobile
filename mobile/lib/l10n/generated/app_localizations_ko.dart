@@ -8217,6 +8217,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorReverseSelectedFramesSemanticLabel => '선택한 프레임 순서 뒤집기';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return '영상은 최소 $seconds초여야 해요. 프레임을 몇 장 더 찍어 주세요.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel => '잠시만요, 클립을 병합하고 있어요';
 
   @override

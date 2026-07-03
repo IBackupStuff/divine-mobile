@@ -8578,6 +8578,11 @@ class AppLocalizationsNl extends AppLocalizations {
       'Geselecteerde frames omkeren';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'Je video moet minstens ${seconds}s duren – leg nog een paar frames vast.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Een moment, we voegen je clips samen';
 

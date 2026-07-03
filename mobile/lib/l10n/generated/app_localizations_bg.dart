@@ -8626,6 +8626,11 @@ class AppLocalizationsBg extends AppLocalizations {
       'Обръщане на избраните кадри';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'Видеото трябва да е поне $secondsс — заснеми още няколко кадъра.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Един момент, обединяваме клиповете ти';
 

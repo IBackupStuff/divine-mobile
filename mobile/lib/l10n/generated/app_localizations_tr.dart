@@ -8506,6 +8506,11 @@ class AppLocalizationsTr extends AppLocalizations {
       'Seçili kareleri ters çevir';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'Videon en az ${seconds}sn olmalı — birkaç kare daha çek.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Bir saniye, kliplerini birleştiriyoruz';
 

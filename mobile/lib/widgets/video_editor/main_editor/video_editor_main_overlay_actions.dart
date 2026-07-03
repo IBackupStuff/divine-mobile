@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -107,9 +108,31 @@ class _TopActions extends ConsumerWidget {
             context.pop();
           }
         },
-        onDone: () => scope.editor?.doneEditing(),
+        onDone: () => _onDonePressed(context, scope),
       ),
     );
+  }
+
+  /// Gates Done on the stop-motion minimum length: a composition shorter
+  /// than [VideoEditorConstants.stopMotionMinOutputDuration] would only reach
+  /// that length by silently looping at render, so instead the tap surfaces a
+  /// "capture more frames" snackbar and stays in the editor.
+  void _onDonePressed(BuildContext context, VideoEditorScope scope) {
+    final clipState = context.read<ClipEditorBloc>().state;
+    const minDuration = VideoEditorConstants.stopMotionMinOutputDuration;
+    if (isStopMotionComposition(clipState.clips) &&
+        clipState.totalDuration < minDuration) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          context.l10n.videoEditorStopMotionTooShortSnackbar(
+            minDuration.inSeconds,
+          ),
+          error: true,
+        ),
+      );
+      return;
+    }
+    scope.editor?.doneEditing();
   }
 
   void _onClosePressed({

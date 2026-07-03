@@ -5025,6 +5025,15 @@
   "@videoEditorReverseSelectedFramesSemanticLabel": {
     "description": "Semantic label for the reverse button while stop-motion stills are multi-selected."
   },
+  "videoEditorStopMotionTooShortSnackbar": "Your video needs at least {seconds}s — capture a few more frames.",
+  "@videoEditorStopMotionTooShortSnackbar": {
+    "description": "Snackbar shown when Done is pressed on a stop-motion composition shorter than the minimum output duration.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "videoEditorMergeProgressLabel": "One moment, we're merging your clips",
   "@videoEditorMergeProgressLabel": {
     "description": "Status text shown while the selected clips are being concatenated into a single clip."

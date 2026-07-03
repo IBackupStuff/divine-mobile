@@ -4025,6 +4025,7 @@
     "videoEditorDeleteSelectedClipsSemanticLabel": "Ausgewählte Clips löschen",
     "videoEditorDeleteSelectedFramesSemanticLabel": "Ausgewählte Frames löschen",
     "videoEditorReverseSelectedFramesSemanticLabel": "Ausgewählte Frames umkehren",
+    "videoEditorStopMotionTooShortSnackbar": "Dein Video braucht mindestens {seconds}s – nimm noch ein paar Frames auf.",
     "videoEditorMergeProgressLabel": "Einen Moment, wir führen deine Clips zusammen",
     "videoEditorMergeFailed": "Clips konnten nicht zusammengeführt werden. Bitte versuche es erneut.",
     "deleteAccountLocalDataDeletionFailed": "Account deleted and signed out, but some local data could not be removed from this device.",

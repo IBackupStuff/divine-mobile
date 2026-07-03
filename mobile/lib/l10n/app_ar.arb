@@ -4025,6 +4025,7 @@
     "videoEditorDeleteSelectedClipsSemanticLabel": "حذف المقاطع المحددة",
     "videoEditorDeleteSelectedFramesSemanticLabel": "حذف الإطارات المحددة",
     "videoEditorReverseSelectedFramesSemanticLabel": "عكس الإطارات المحددة",
+    "videoEditorStopMotionTooShortSnackbar": "يجب أن يكون الفيديو {seconds} ثانية على الأقل — التقط بضعة إطارات إضافية.",
     "videoEditorMergeProgressLabel": "لحظة من فضلك، نقوم بدمج مقاطعك",
     "videoEditorMergeFailed": "تعذّر دمج المقاطع. يُرجى المحاولة مرة أخرى.",
     "deleteAccountLocalDataDeletionFailed": "Account deleted and signed out, but some local data could not be removed from this device.",

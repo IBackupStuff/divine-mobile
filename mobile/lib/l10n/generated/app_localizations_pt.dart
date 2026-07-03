@@ -8594,6 +8594,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Inverter quadros selecionados';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'Seu vídeo precisa de pelo menos ${seconds}s — capture mais alguns quadros.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Um momento, estamos mesclando seus clipes';
 

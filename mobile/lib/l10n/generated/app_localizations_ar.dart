@@ -8485,6 +8485,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'عكس الإطارات المحددة';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'يجب أن يكون الفيديو $seconds ثانية على الأقل — التقط بضعة إطارات إضافية.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel => 'لحظة من فضلك، نقوم بدمج مقاطعك';
 
   @override

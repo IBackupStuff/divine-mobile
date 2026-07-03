@@ -8719,6 +8719,11 @@ class AppLocalizationsPl extends AppLocalizations {
       'Odwróć zaznaczone klatki';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'Twój film musi trwać co najmniej ${seconds}s – dodaj jeszcze kilka klatek.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel => 'Chwila, scalamy Twoje klipy';
 
   @override

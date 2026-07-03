@@ -8663,6 +8663,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Inverser les images sélectionnées';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'Ta vidéo doit durer au moins ${seconds}s — capture encore quelques images.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Un instant, nous fusionnons vos clips';
 

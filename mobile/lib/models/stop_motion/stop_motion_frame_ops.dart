@@ -21,7 +21,7 @@ abstract class StopMotionFrameOps {
   static const int minFramesPerImage = 1;
 
   /// Highest number of output frames a still may be held for.
-  static const int maxFramesPerImage = 10;
+  static const int maxFramesPerImage = 300;
 
   /// Default hold for a freshly captured still: 1 output frame at 24fps.
   static const int defaultFramesPerImage = 1;

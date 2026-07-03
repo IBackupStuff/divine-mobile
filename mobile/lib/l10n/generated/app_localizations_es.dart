@@ -8624,6 +8624,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Invertir fotogramas seleccionados';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'Tu video necesita al menos ${seconds}s: captura algunos fotogramas más.';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel =>
       'Un momento, estamos combinando tus clips';
 

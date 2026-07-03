@@ -8359,6 +8359,11 @@ class AppLocalizationsAm extends AppLocalizations {
       'የተመረጡ ፍሬሞችን አገላብጥ';
 
   @override
+  String videoEditorStopMotionTooShortSnackbar(int seconds) {
+    return 'ቪዲዮው ቢያንስ $seconds ሰከንድ መሆን አለበት — ጥቂት ተጨማሪ ፍሬሞችን ያንሱ።';
+  }
+
+  @override
   String get videoEditorMergeProgressLabel => 'ትንሽ ይቆዩ፣ ቅንጥቦችዎን እያዋሃድን ነው';
 
   @override

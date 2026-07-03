@@ -14782,6 +14782,12 @@ abstract class AppLocalizations {
   /// **'Reverse selected frames'**
   String get videoEditorReverseSelectedFramesSemanticLabel;
 
+  /// Snackbar shown when Done is pressed on a stop-motion composition shorter than the minimum output duration.
+  ///
+  /// In en, this message translates to:
+  /// **'Your video needs at least {seconds}s — capture a few more frames.'**
+  String videoEditorStopMotionTooShortSnackbar(int seconds);
+
   /// Status text shown while the selected clips are being concatenated into a single clip.
   ///
   /// In en, this message translates to:

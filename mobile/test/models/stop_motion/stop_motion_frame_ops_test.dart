@@ -41,8 +41,12 @@ void main() {
         StopMotionFrameOps.framesPerImageToDuration(1),
       );
       expect(
-        StopMotionFrameOps.framesPerImageToDuration(99),
-        StopMotionFrameOps.framesPerImageToDuration(10),
+        StopMotionFrameOps.framesPerImageToDuration(
+          StopMotionFrameOps.maxFramesPerImage + 1,
+        ),
+        StopMotionFrameOps.framesPerImageToDuration(
+          StopMotionFrameOps.maxFramesPerImage,
+        ),
       );
     });
   });
