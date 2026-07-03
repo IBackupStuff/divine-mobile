@@ -122,8 +122,8 @@ void main() {
         },
       );
 
-      test('does not support grid lines', () {
-        expect(VideoRecorderMode.stopMotion.supportGridLines, isFalse);
+      test('supports grid lines (shot-to-shot alignment)', () {
+        expect(VideoRecorderMode.stopMotion.supportGridLines, isTrue);
       });
 
       test('does not support a countdown timer', () {

@@ -50,6 +50,9 @@ const _kLastUsedCameraLensKey = 'camera_last_used_lens';
 /// SharedPreferences key for the last-used video stabilization mode.
 const _kLastUsedStabilizationModeKey = 'camera_last_used_stabilization';
 
+/// SharedPreferences key for the last grid-lines on/off choice.
+const _kGridLinesEnabledKey = 'camera_grid_lines_enabled';
+
 /// Factory for creating a [CountdownSoundService].
 ///
 /// Injectable so tests can verify the wiring that protects the
@@ -300,9 +303,15 @@ class VideoRecorderBloc
         isStopMotionComposition(_readClipManager().clips)) {
       // Opened over a stop-motion composition to add more stills: switch to the
       // stills shutter so the "+" camera captures photos, not a video. Set only
-      // the mode field — routing through _applyRecorderMode would clear the clip
-      // manager (the composition being edited).
-      emit(state.copyWith(recorderMode: VideoRecorderMode.stopMotion));
+      // the mode field (plus its grid default) — routing through
+      // _applyRecorderMode would clear the clip manager (the composition being
+      // edited).
+      emit(
+        state.copyWith(
+          recorderMode: VideoRecorderMode.stopMotion,
+          showGridLines: _gridLinesEnabledFor(VideoRecorderMode.stopMotion),
+        ),
+      );
     }
 
     final savedLensString = prefs.getString(_kLastUsedCameraLensKey);
@@ -1389,7 +1398,7 @@ class VideoRecorderBloc
       state.copyWith(
         recorderMode: mode,
         aspectRatio: mode.defaultAspectRatio,
-        showGridLines: mode.supportGridLines,
+        showGridLines: _gridLinesEnabledFor(mode),
         timerDuration: mode.supportsCountdownTimer
             ? state.timerDuration
             : TimerDuration.off,
@@ -1465,8 +1474,16 @@ class VideoRecorderBloc
     VideoRecorderGridLinesToggled event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
-    emit(state.copyWith(showGridLines: !state.showGridLines));
+    final enabled = !state.showGridLines;
+    emit(state.copyWith(showGridLines: enabled));
+    _readSharedPreferences().setBool(_kGridLinesEnabledKey, enabled);
   }
+
+  /// Whether a grid-supporting [mode] should show the grid: the user's last
+  /// persisted choice, defaulting to on.
+  bool _gridLinesEnabledFor(VideoRecorderMode mode) =>
+      mode.supportGridLines &&
+      (_readSharedPreferences().getBool(_kGridLinesEnabledKey) ?? true);
 
   // === Stop-motion handlers ===
 

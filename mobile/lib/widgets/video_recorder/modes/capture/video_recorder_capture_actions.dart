@@ -66,6 +66,14 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                     ),
                   ),
                 if (state.capturesStills) const _GhostFrameButton(),
+                if (state.capturesStills)
+                  _IconButton(
+                    icon: .gridNine,
+                    label: context.l10n.videoRecorderToggleGridLabel,
+                    onTap: () => context.read<VideoRecorderBloc>().add(
+                      const VideoRecorderGridLinesToggled(),
+                    ),
+                  ),
                 _IconButton(
                   icon: state.aspectRatio == .square
                       ? .cropSquare

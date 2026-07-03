@@ -187,6 +187,8 @@ void main() {
 
     when(() => prefs.getString(any())).thenReturn(null);
     when(() => prefs.setString(any(), any())).thenAnswer((_) async => true);
+    when(() => prefs.getBool(any())).thenReturn(null);
+    when(() => prefs.setBool(any(), any())).thenAnswer((_) async => true);
   });
 
   /// Builds a bloc with all dependencies wired to the mocks.
@@ -620,6 +622,41 @@ void main() {
           const VideoRecorderBlocState(showGridLines: true),
           const VideoRecorderBlocState(),
         ],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'persists each choice',
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(const VideoRecorderGridLinesToggled());
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const VideoRecorderGridLinesToggled());
+        },
+        verify: (_) {
+          verify(
+            () => prefs.setBool('camera_grid_lines_enabled', true),
+          ).called(1);
+          verify(
+            () => prefs.setBool('camera_grid_lines_enabled', false),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'a persisted off choice keeps the grid hidden on mode switch',
+        setUp: () {
+          when(
+            () => prefs.getBool('camera_grid_lines_enabled'),
+          ).thenReturn(false);
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+        ),
+        verify: (bloc) {
+          expect(bloc.state.recorderMode, VideoRecorderMode.classic);
+          expect(bloc.state.showGridLines, isFalse);
+        },
       );
     });
 
@@ -1806,6 +1843,8 @@ void main() {
             bloc.add(const VideoRecorderInitializeRequested(fromEditor: true)),
         verify: (bloc) {
           expect(bloc.state.recorderMode, VideoRecorderMode.stopMotion);
+          // The mode's grid default applies even on this direct switch.
+          expect(bloc.state.showGridLines, isTrue);
           // Setting the mode directly must not clear the composition.
           verifyNever(
             () => clipManager.clearAll(

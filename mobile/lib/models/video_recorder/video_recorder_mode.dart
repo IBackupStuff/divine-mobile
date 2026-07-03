@@ -46,7 +46,7 @@ enum VideoRecorderMode {
   bool get supportGridLines => switch (this) {
     .upload => false,
     .capture => false,
-    .stopMotion => false,
+    .stopMotion => true,
     .lipSync => false,
     .classic => true,
   };
