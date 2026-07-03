@@ -14,6 +14,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
@@ -434,6 +435,66 @@ void main() {
           findsNothing,
         );
       });
+    });
+
+    group('stop-motion frames chip', () {
+      DivineVideoClip clipWithHolds(List<int> holds) {
+        final frames = [
+          for (final (i, hold) in holds.indexed)
+            StopMotionClipFrame(
+              path: '/frames/f$i.jpg',
+              duration: StopMotionFrameOps.framesPerImageToDuration(hold),
+            ),
+        ];
+        return DivineVideoClip(
+          id: 'sm1',
+          stopMotionFrames: frames,
+          duration: StopMotionFrameOps.totalDuration(frames),
+          recordedAt: DateTime(2024),
+          targetAspectRatio: model.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+        );
+      }
+
+      testWidgets('shows the shared global hold', (tester) async {
+        clipEditorBloc.add(
+          ClipEditorInitialized([
+            clipWithHolds([3, 3, 3]),
+          ]),
+        );
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.videoEditorStopMotionFramesCount(3)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets(
+        'shows the most common hold instead of the bare label when '
+        'frames disagree',
+        (tester) async {
+          clipEditorBloc.add(
+            ClipEditorInitialized([
+              clipWithHolds([2, 2, 1, 2]),
+            ]),
+          );
+          await tester.pumpWidget(buildWidget());
+          await tester.pump();
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            find.text(l10n.videoEditorStopMotionFramesCount(2)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.videoEditorStopMotionFramesPerImageLabel),
+            findsNothing,
+          );
+        },
+      );
     });
   });
 }

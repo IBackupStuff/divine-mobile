@@ -63,7 +63,7 @@ class _TopActions extends ConsumerWidget {
     // Frames-per-image control lives in the toolbar's center slot — top
     // centre, inline between the back and done buttons — only for a
     // stop-motion composition.
-    final ({String clipId, int? value})? stopMotionData = context.select((
+    final ({String clipId, int value})? stopMotionData = context.select((
       ClipEditorBloc b,
     ) {
       final clips = b.state.clips;
@@ -252,23 +252,19 @@ class _StopMotionFramesChip extends StatelessWidget {
 
   final String clipId;
 
-  /// The global-default frames-per-image, or `null` when the stills' defaults
-  /// disagree (only per-frame overrides remain).
-  final int? value;
+  /// The global-default frames-per-image (see
+  /// [StopMotionFrameOps.globalDefaultFramesPerImage]).
+  final int value;
 
   @override
   Widget build(BuildContext context) {
-    final label = value != null
-        ? context.l10n.videoEditorStopMotionFramesCount(value!)
-        : context.l10n.videoEditorStopMotionFramesPerImageLabel;
+    final label = context.l10n.videoEditorStopMotionFramesCount(value);
 
     return Semantics(
       button: true,
-      value: value != null
-          ? context.l10n.videoEditorStopMotionFramesPerImageValueSemanticLabel(
-              value!,
-            )
-          : null,
+      value: context.l10n.videoEditorStopMotionFramesPerImageValueSemanticLabel(
+        value,
+      ),
       child: GestureDetector(
         onTap: () => editStopMotionGlobalHold(context, clipId: clipId),
         child: DecoratedBox(

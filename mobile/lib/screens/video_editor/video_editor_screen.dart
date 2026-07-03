@@ -346,12 +346,18 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     final added = clips
         .where((c) => !initialIds.contains(c.id) && c.isStopMotion)
         .toList();
-    final newFrames = [
+    final capturedFrames = [
       for (final clip in added) ...?clip.stopMotionFrames,
     ];
-    if (newFrames.isEmpty) return;
+    if (capturedFrames.isEmpty) return;
 
     final targetFrames = target.stopMotionFrames ?? const [];
+    // Fresh captures arrive with the app default hold; adopt the session's
+    // global default so they don't drift from the stills already in the clip.
+    final newFrames = StopMotionFrameOps.setGlobalHold(
+      capturedFrames,
+      StopMotionFrameOps.globalDefaultFramesPerImage(targetFrames),
+    );
     final index = StopMotionFrameOps.insertIndexAtPosition(
       targetFrames,
       playhead,

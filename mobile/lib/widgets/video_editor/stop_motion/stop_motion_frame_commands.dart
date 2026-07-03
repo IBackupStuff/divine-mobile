@@ -70,9 +70,7 @@ Future<void> editStopMotionGlobalHold(
 }) async {
   final frames = _stopMotionFrames(context, clipId);
   if (frames == null || frames.isEmpty) return;
-  final current =
-      StopMotionFrameOps.globalDefaultFramesPerImage(frames) ??
-      StopMotionFrameOps.minFramesPerImage;
+  final current = StopMotionFrameOps.globalDefaultFramesPerImage(frames);
 
   final result = await _showFramesPerImageSheet(context, current);
   if (result == null || !context.mounted) return;

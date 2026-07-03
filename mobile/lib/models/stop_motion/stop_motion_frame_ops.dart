@@ -245,21 +245,34 @@ abstract class StopMotionFrameOps {
   }
 
   /// The global-default frames-per-image: the value shared by every
-  /// *non-overridden* still, or `null` when there are no non-overridden stills
-  /// or they disagree. Drives the global control's displayed value so a single
-  /// per-frame override doesn't blank it.
-  static int? globalDefaultFramesPerImage(List<StopMotionClipFrame> frames) {
-    int? value;
+  /// *non-overridden* still. When there are no non-overridden stills or they
+  /// disagree (merged sets, all stills individually overridden), falls back to
+  /// the most common hold across *all* stills — ties broken by first
+  /// occurrence — so the global control always displays a value.
+  static int globalDefaultFramesPerImage(List<StopMotionClipFrame> frames) {
+    int? shared;
+    var agree = true;
+    final counts = <int, int>{};
     for (final frame in frames) {
-      if (frame.holdOverridden) continue;
       final framesPerImage = durationToFramesPerImage(frame.duration);
-      if (value == null) {
-        value = framesPerImage;
-      } else if (value != framesPerImage) {
-        return null;
+      counts[framesPerImage] = (counts[framesPerImage] ?? 0) + 1;
+      if (frame.holdOverridden) continue;
+      if (shared == null) {
+        shared = framesPerImage;
+      } else if (shared != framesPerImage) {
+        agree = false;
       }
     }
-    return value;
+    if (shared != null && agree) return shared;
+    var best = defaultFramesPerImage;
+    var bestCount = 0;
+    for (final entry in counts.entries) {
+      if (entry.value > bestCount) {
+        best = entry.key;
+        bestCount = entry.value;
+      }
+    }
+    return best;
   }
 
   /// [clip] with its stop-motion [frames] replaced and its cached [duration]

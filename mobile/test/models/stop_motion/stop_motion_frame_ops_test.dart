@@ -374,18 +374,42 @@ void main() {
       expect(StopMotionFrameOps.globalDefaultFramesPerImage(frames), 2);
     });
 
-    test('returns null when non-overridden frames disagree', () {
+    test(
+      'falls back to the most common hold when non-overridden frames '
+      'disagree',
+      () {
+        expect(
+          StopMotionFrameOps.globalDefaultFramesPerImage(
+            framesOf([2, 2, 1, 2]),
+          ),
+          2,
+        );
+      },
+    );
+
+    test('breaks a tie by first occurrence', () {
       expect(
-        StopMotionFrameOps.globalDefaultFramesPerImage(framesOf([1, 3])),
-        isNull,
+        StopMotionFrameOps.globalDefaultFramesPerImage(framesOf([3, 1, 3, 1])),
+        3,
       );
     });
 
-    test('returns null when every frame is overridden', () {
-      var frames = framesOf([2, 2]);
-      frames = StopMotionFrameOps.setFrameHold(frames, 0, 4);
-      frames = StopMotionFrameOps.setFrameHold(frames, 1, 6);
-      expect(StopMotionFrameOps.globalDefaultFramesPerImage(frames), isNull);
+    test(
+      'falls back to the most common hold when every frame is overridden',
+      () {
+        var frames = framesOf([2, 2, 2]);
+        frames = StopMotionFrameOps.setFrameHold(frames, 0, 4);
+        frames = StopMotionFrameOps.setFrameHold(frames, 1, 4);
+        frames = StopMotionFrameOps.setFrameHold(frames, 2, 6);
+        expect(StopMotionFrameOps.globalDefaultFramesPerImage(frames), 4);
+      },
+    );
+
+    test('returns the capture default for an empty list', () {
+      expect(
+        StopMotionFrameOps.globalDefaultFramesPerImage(const []),
+        StopMotionFrameOps.defaultFramesPerImage,
+      );
     });
   });
 
