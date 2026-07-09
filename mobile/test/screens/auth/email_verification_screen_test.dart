@@ -771,7 +771,6 @@ void main() {
                 pendingVerificationServiceProvider.overrideWithValue(
                   mockPendingVerification,
                 ),
-                forceExploreTabNameProvider.overrideWith((ref) => null),
               ],
               child: MaterialApp(
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
