@@ -963,9 +963,12 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       return;
     }
     _completionClaimed = true;
+    final exchangeGeneration = _verificationGeneration;
     final claimedDeviceCode = _pendingDeviceCode;
     _pendingDeviceCode = null;
     _pendingVerifier = null;
+
+    bool isStaleExchange() => exchangeGeneration != _verificationGeneration;
 
     for (var attempt = 1; attempt <= _maxExchangeRetries; attempt++) {
       try {
@@ -979,9 +982,15 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
           code: code,
           verifier: verifier,
         );
+        if (isStaleExchange()) {
+          return;
+        }
 
         final session = KeycastSession.fromTokenResponse(tokenResponse);
         await _consumeInviteWithSessionIfNeeded(session);
+        if (isStaleExchange()) {
+          return;
+        }
 
         Log.info(
           'Token exchange successful, showing verification confirmation',
@@ -1028,6 +1037,9 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
 
         return; // Success - exit the retry loop
       } on InviteApiException catch (e) {
+        if (isStaleExchange()) {
+          return;
+        }
         await _authService.clearPendingDivineOAuthSession();
         Log.error(
           'Invite activation failed: '
@@ -1047,6 +1059,9 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         );
         return;
       } on OAuthException catch (e) {
+        if (isStaleExchange()) {
+          return;
+        }
         // OAuth errors are not retryable (e.g., invalid code, expired code)
         Log.error(
           'OAuth exchange failed: ${e.message}',
@@ -1062,6 +1077,9 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         );
         return; // Don't retry OAuth errors
       } catch (e) {
+        if (isStaleExchange()) {
+          return;
+        }
         // Network errors - retry if we have attempts left
         final isLastAttempt = attempt == _maxExchangeRetries;
         Log.warning(
@@ -1088,6 +1106,9 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
 
         // Wait before retrying
         await Future<void>.delayed(_exchangeRetryDelay);
+        if (isStaleExchange()) {
+          return;
+        }
       }
     }
   }

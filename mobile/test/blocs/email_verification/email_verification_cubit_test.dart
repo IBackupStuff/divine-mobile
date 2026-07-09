@@ -1770,6 +1770,85 @@ void main() {
           });
         },
       );
+
+      test(
+        'stale exchange retry after a new attempt does not emit cleanup or sign in',
+        () {
+          const secondDeviceCode = 'second-device-code-def456';
+          const secondVerifier = 'second-verifier-uvw123';
+          const secondEmail = 'second@example.com';
+          const firstCode = 'first-auth-code';
+
+          when(() => mockAuthService.isRegistered).thenReturn(false);
+          when(() => mockAuthService.isAuthenticated).thenReturn(false);
+          when(() => mockAuthService.isAnonymous).thenReturn(false);
+          when(
+            () => mockOAuth.pollForCode(testDeviceCode),
+          ).thenAnswer((_) async => PollResult.complete(firstCode));
+          when(
+            () => mockOAuth.pollForCode(secondDeviceCode),
+          ).thenAnswer((_) async => PollResult.pending());
+
+          var firstExchangeCalls = 0;
+          when(
+            () => mockOAuth.exchangeCode(
+              code: firstCode,
+              verifier: testVerifier,
+            ),
+          ).thenAnswer((_) async {
+            firstExchangeCalls++;
+            if (firstExchangeCalls == 1) {
+              throw Exception('transient network error');
+            }
+            return const TokenResponse(bunkerUrl: 'wss://first-session.test');
+          });
+          when(
+            () => mockAuthService.signInWithDivineOAuth(any()),
+          ).thenAnswer((_) async {});
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+              );
+
+            // First poll completes and starts exchange attempt A. Its first
+            // exchange throws, putting A into the 2s retry delay.
+            fake.elapse(const Duration(seconds: 4));
+            expect(firstExchangeCalls, 1);
+
+            // A fresh attempt B starts while A is waiting to retry. This bumps
+            // the generation and must keep its polling context/timers intact.
+            cubit.startPolling(
+              deviceCode: secondDeviceCode,
+              verifier: secondVerifier,
+              email: secondEmail,
+            );
+            expect(cubit.state.status, EmailVerificationStatus.polling);
+            expect(cubit.state.pendingEmail, secondEmail);
+
+            // Let A's retry delay elapse and its second exchange return a
+            // session. A is stale and must not commit, cleanup B, emit failure
+            // or success, or sign in with the first session.
+            fake.elapse(const Duration(seconds: 3));
+            fake.flushMicrotasks();
+
+            expect(firstExchangeCalls, 1);
+            expect(cubit.state.status, EmailVerificationStatus.polling);
+            expect(cubit.state.pendingEmail, secondEmail);
+            expect(cubit.state.errorCode, isNull);
+            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+
+            // B's scheduled poll should still be alive.
+            verify(() => mockOAuth.pollForCode(secondDeviceCode)).called(1);
+
+            cubit.close();
+            fake.flushMicrotasks();
+          });
+        },
+      );
     });
 
     group('resendVerification', () {
