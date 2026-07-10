@@ -154,6 +154,7 @@ const _knownUntranslatedDebt = <String>{
   'communitySuggestSuccess',
   'communitySuggestFailure',
   'communitySuggestAlready',
+  'communitySuggestActionLabel',
 };
 
 Map<String, Object?> _readArb(File file) {

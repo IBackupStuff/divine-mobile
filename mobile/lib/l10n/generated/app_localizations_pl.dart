@@ -1400,6 +1400,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get communitySuggestAlready => 'You suggested this';
 
   @override
+  String get communitySuggestActionLabel => 'Classify';
+
+  @override
   String get videoErrorNotFound => 'Nie znaleziono filmu';
 
   @override
