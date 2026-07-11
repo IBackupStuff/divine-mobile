@@ -168,18 +168,6 @@ enum VerifyPinError {
 
 /// Result from POST /api/headless/verify-pin
 class VerifyPinResult {
-  final bool success;
-
-  /// OAuth authorization code, returned synchronously on success.
-  final String? code;
-
-  /// Reason code on failure (null on success).
-  final VerifyPinError? errorCode;
-
-  /// Human-readable description from the server, for logs only — never shown
-  /// to the user (the UI localizes [errorCode]).
-  final String? errorDescription;
-
   VerifyPinResult({
     required this.success,
     this.code,
@@ -198,13 +186,22 @@ class VerifyPinResult {
     errorCode: errorCode,
     errorDescription: description,
   );
+
+  final bool success;
+
+  /// OAuth authorization code, returned synchronously on success.
+  final String? code;
+
+  /// Reason code on failure (null on success).
+  final VerifyPinError? errorCode;
+
+  /// Human-readable description from the server, for logs only — never shown
+  /// to the user (the UI localizes [errorCode]).
+  final String? errorDescription;
 }
 
 /// Result from POST /api/auth/resend-verification
 class ResendVerificationResult {
-  final bool success;
-  final String? message;
-
   ResendVerificationResult({required this.success, this.message});
 
   factory ResendVerificationResult.fromJson(Map<String, dynamic> json) {
@@ -216,6 +213,9 @@ class ResendVerificationResult {
 
   factory ResendVerificationResult.failure() =>
       ResendVerificationResult(success: false);
+
+  final bool success;
+  final String? message;
 }
 
 /// Result from POST /api/auth/forgot-password
