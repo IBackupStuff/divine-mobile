@@ -32,7 +32,6 @@ nip58_badge_models # noise: models
 nostr_list_service_mixin # noise: mixin
 openvine_media_cache
 outgoing_dm_retry_service_reportable_sites # noise: reportable-sites constants
-pending_verification_service
 push_notification_session_coordinator
 share_service
 social_event_service_base
